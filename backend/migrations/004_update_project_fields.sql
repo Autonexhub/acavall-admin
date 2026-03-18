@@ -4,21 +4,23 @@
 -- Step 1: Add new funding_type column
 ALTER TABLE projects
 ADD COLUMN funding_type ENUM('public_subsidy', 'private_subsidy', 'financiacion_propia')
-DEFAULT 'private_subsidy'
-AFTER type;
+DEFAULT 'private_subsidy' AFTER type;
 
--- Step 2: Migrate existing type data to funding_type
-UPDATE projects
-SET funding_type = type;
+-- Step 2: Copy existing type values to funding_type (they're currently funding types)
+UPDATE projects SET funding_type = type;
 
--- Step 3: Update the type column to use new activity-based categories
--- First set all to a temporary valid value
-UPDATE projects SET type = 'private_subsidy';
-
--- Modify the ENUM column to use the new values
+-- Step 3: Add a temporary column for the new type values
 ALTER TABLE projects
-MODIFY COLUMN type ENUM('ocio', 'educacion', 'terapia', 'voluntariado', 'formacion', 'otros')
-DEFAULT 'terapia' NOT NULL;
+ADD COLUMN type_new ENUM('ocio', 'educacion', 'terapia', 'voluntariado', 'formacion', 'otros')
+DEFAULT 'terapia' AFTER type;
 
 -- Step 4: Set default type for all existing projects
-UPDATE projects SET type = 'terapia';
+UPDATE projects SET type_new = 'terapia';
+
+-- Step 5: Drop the old type column
+ALTER TABLE projects DROP COLUMN type;
+
+-- Step 6: Rename type_new to type
+ALTER TABLE projects CHANGE COLUMN type_new type
+ENUM('ocio', 'educacion', 'terapia', 'voluntariado', 'formacion', 'otros')
+DEFAULT 'terapia' NOT NULL AFTER id;
