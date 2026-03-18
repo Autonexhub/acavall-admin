@@ -50,7 +50,8 @@ export function ProjectForm({ project, onSubmit, isSubmitting }: ProjectFormProp
       num_sessions: project?.num_sessions || 0,
       beneficiaries: project?.beneficiaries || 0,
       amount: project?.amount || 0,
-      type: project?.type || 'private_subsidy',
+      type: project?.type || 'terapia',
+      funding_type: project?.funding_type || 'private_subsidy',
       budget_number: project?.budget_number || '',
       budget_link: project?.budget_link || '',
       notes: project?.notes || '',
@@ -60,6 +61,7 @@ export function ProjectForm({ project, onSubmit, isSubmitting }: ProjectFormProp
 
   const selectedEntityIds = watch('entity_ids') || [];
   const projectType = watch('type');
+  const fundingType = watch('funding_type');
 
   const handleEntityToggle = (entityId: number) => {
     const currentIds = selectedEntityIds;
@@ -190,17 +192,38 @@ export function ProjectForm({ project, onSubmit, isSubmitting }: ProjectFormProp
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="type">Tipo de Financiación</Label>
+            <Label htmlFor="type">Tipo de Proyecto</Label>
             <Select
               value={projectType}
-              onValueChange={(value) => setValue('type', value as 'public_subsidy' | 'private_subsidy')}
+              onValueChange={(value) => setValue('type', value as 'ocio' | 'educacion' | 'terapia' | 'voluntariado' | 'formacion' | 'otros')}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona el tipo" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="ocio">Ocio</SelectItem>
+                <SelectItem value="educacion">Educación</SelectItem>
+                <SelectItem value="terapia">Terapia</SelectItem>
+                <SelectItem value="voluntariado">Voluntariado</SelectItem>
+                <SelectItem value="formacion">Formación</SelectItem>
+                <SelectItem value="otros">Otros</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="funding_type">Tipo de Financiación</Label>
+            <Select
+              value={fundingType}
+              onValueChange={(value) => setValue('funding_type', value as 'public_subsidy' | 'private_subsidy' | 'financiacion_propia')}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona el tipo de financiación" />
+              </SelectTrigger>
+              <SelectContent>
                 <SelectItem value="public_subsidy">Subvención Pública</SelectItem>
                 <SelectItem value="private_subsidy">Subvención Privada</SelectItem>
+                <SelectItem value="financiacion_propia">Financiación Propia</SelectItem>
               </SelectContent>
             </Select>
           </div>

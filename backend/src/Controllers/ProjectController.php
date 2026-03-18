@@ -93,7 +93,8 @@ class ProjectController
                 'num_sessions' => isset($body['num_sessions']) ? (int)$body['num_sessions'] : 0,
                 'beneficiaries' => isset($body['beneficiaries']) ? (int)$body['beneficiaries'] : 0,
                 'amount' => isset($body['amount']) ? (float)$body['amount'] : 0,
-                'type' => $body['type'] ?? 'own_funding',
+                'type' => $body['type'] ?? 'terapia',
+                'funding_type' => $body['funding_type'] ?? 'private_subsidy',
                 'budget_link' => $body['budget_link'] ?? null,
                 'notes' => $body['notes'] ?? null,
             ];
@@ -154,6 +155,7 @@ class ProjectController
             if (isset($body['beneficiaries'])) $data['beneficiaries'] = (int)$body['beneficiaries'];
             if (isset($body['amount'])) $data['amount'] = (float)$body['amount'];
             if (isset($body['type'])) $data['type'] = $body['type'];
+            if (isset($body['funding_type'])) $data['funding_type'] = $body['funding_type'];
             if (isset($body['budget_link'])) $data['budget_link'] = $body['budget_link'];
             if (isset($body['notes'])) $data['notes'] = $body['notes'];
 

@@ -40,3 +40,17 @@ next-env.d.ts
 
 # Backend production env
 backend/.env.production
+
+# SECURITY: Never commit these files
+run-prod-migration.php
+create-admin-user.sql
+deployment-migration.sql
+deploy.sh
+deploy-index.sh
+scripts/deploy.sh
+
+# Database dumps and migrations with credentials
+*-migration.sql
+*.sql
+!backend/migrations/*.sql
+!backend/database/schema.sql

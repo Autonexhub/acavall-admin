@@ -26,7 +26,7 @@ export const sessionSchema = z.object({
   hours: z.number().min(0.1, 'Las horas deben ser mayores a 0'),
   participants: z.number().min(0).optional(),
   notes: z.string().optional(),
-  type: z.enum(['regular', 'festivo', 'special']).default('regular'),
+  type: z.enum(['perros', 'gatos', 'caballos', 'sin_animales', 'entorno_natural']).default('caballos'),
   therapist_ids: z.array(z.number()).min(1, 'Debe asignar al menos un terapeuta'),
 });
 
@@ -63,7 +63,8 @@ export const projectSchema = z.object({
   num_sessions: z.number().min(0).default(0),
   beneficiaries: z.number().min(0).default(0),
   amount: z.number().min(0).default(0),
-  type: z.enum(['public_subsidy', 'private_subsidy']).default('private_subsidy'),
+  type: z.enum(['ocio', 'educacion', 'terapia', 'voluntariado', 'formacion', 'otros']).default('terapia'),
+  funding_type: z.enum(['public_subsidy', 'private_subsidy', 'financiacion_propia']).default('private_subsidy'),
   budget_number: z.string().optional(),
   budget_link: z.string().url('URL inválida').optional().or(z.literal('')),
   notes: z.string().optional(),

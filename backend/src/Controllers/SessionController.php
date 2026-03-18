@@ -141,7 +141,7 @@ class SessionController
                 'end_time' => $body['end_time'] ?? '00:00:00',
                 'hours' => !empty($body['hours']) ? (float)$body['hours'] : 0,
                 'participants' => !empty($body['participants']) ? (int)$body['participants'] : 0,
-                'type' => $body['type'] ?? 'regular',
+                'type' => $body['type'] ?? 'caballos',
                 'notes' => $body['notes'] ?? null,
                 'created_by' => $request->getAttribute('user_id')
             ];

@@ -36,7 +36,13 @@
       "Bash(find:*)",
       "Bash(test:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git push:*)",
+      "Bash(cat:*)",
+      "Bash(git -C /Users/marcosriganti/Projects/acavall-harmony-next log --oneline)",
+      "Bash(git rm:*)"
     ]
   }
 }

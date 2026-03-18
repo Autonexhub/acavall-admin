@@ -71,13 +71,13 @@ INSERT INTO residence_session_dates (residence_id, month, session_date) VALUES
 
 -- Insert sample sessions
 INSERT INTO sessions (center_id, date, start_time, end_time, hours, participants, type) VALUES
-(1, '2025-01-01', '08:15', '14:30', 6.25, 12, 'regular'),
-(1, '2025-01-06', '08:15', '10:15', 2.00, 8, 'regular'),
-(1, '2025-01-08', '08:15', '10:15', 2.00, 8, 'festivo'),
-(2, '2025-01-09', '17:30', '19:30', 2.00, 10, 'regular'),
-(3, '2025-01-14', '10:00', '11:30', 1.50, 6, 'regular'),
-(1, '2025-01-15', '08:15', '12:15', 4.00, 10, 'regular'),
-(4, '2025-01-18', '11:00', '13:00', 2.00, 8, 'special');
+(1, '2025-01-01', '08:15', '14:30', 6.25, 12, 'caballos'),
+(1, '2025-01-06', '08:15', '10:15', 2.00, 8, 'perros'),
+(1, '2025-01-08', '08:15', '10:15', 2.00, 8, 'gatos'),
+(2, '2025-01-09', '17:30', '19:30', 2.00, 10, 'caballos'),
+(3, '2025-01-14', '10:00', '11:30', 1.50, 6, 'sin_animales'),
+(1, '2025-01-15', '08:15', '12:15', 4.00, 10, 'caballos'),
+(4, '2025-01-18', '11:00', '13:00', 2.00, 8, 'entorno_natural');
 
 -- Insert session-therapist assignments
 INSERT INTO session_therapist (session_id, therapist_id) VALUES

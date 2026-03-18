@@ -24,6 +24,18 @@ import type { TherapistFormData } from '@/lib/validations/schemas';
 import { Badge } from '@/components/ui/badge';
 import { useMemo } from 'react';
 
+// Helper function to get display label for session type
+const getSessionTypeLabel = (type: string): string => {
+  const labels: Record<string, string> = {
+    perros: 'Perros',
+    gatos: 'Gatos',
+    caballos: 'Caballos',
+    sin_animales: 'Sin animales',
+    entorno_natural: 'Entorno natural',
+  };
+  return labels[type] || type;
+};
+
 export default function TherapistDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -250,8 +262,8 @@ export default function TherapistDetailPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={session.type === 'festivo' ? 'secondary' : 'default'}>
-                      {session.type}
+                    <Badge variant="default">
+                      {getSessionTypeLabel(session.type)}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
                       {session.hours}h

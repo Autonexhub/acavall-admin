@@ -38,7 +38,7 @@ export interface Session {
   hours: number;
   participants?: number;
   notes?: string;
-  type: 'regular' | 'festivo' | 'special';
+  type: 'perros' | 'gatos' | 'caballos' | 'sin_animales' | 'entorno_natural';
   entity?: Entity;
   entity_name?: string;
   project?: Project;
@@ -110,7 +110,8 @@ export interface Project {
   num_sessions: number;
   beneficiaries: number;
   amount: number;
-  type: 'public_subsidy' | 'private_subsidy';
+  type: 'ocio' | 'educacion' | 'terapia' | 'voluntariado' | 'formacion' | 'otros';
+  funding_type: 'public_subsidy' | 'private_subsidy' | 'financiacion_propia';
   budget_number?: string;
   budget_link?: string;
   notes?: string;

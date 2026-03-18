@@ -60,7 +60,7 @@ export function SessionForm({ session, onSubmit, isSubmitting }: SessionFormProp
           therapist_ids: session.therapists?.map((t) => t.id) || [],
         }
       : {
-          type: 'regular',
+          type: 'caballos',
           therapist_ids: [],
         },
   });
@@ -259,7 +259,7 @@ export function SessionForm({ session, onSubmit, isSubmitting }: SessionFormProp
           <Label htmlFor="type">Tipo de sesión</Label>
           <Select
             value={watch('type')}
-            onValueChange={(value: 'regular' | 'festivo' | 'special') =>
+            onValueChange={(value: 'perros' | 'gatos' | 'caballos' | 'sin_animales' | 'entorno_natural') =>
               setValue('type', value)
             }
           >
@@ -267,9 +267,11 @@ export function SessionForm({ session, onSubmit, isSubmitting }: SessionFormProp
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="regular">Regular</SelectItem>
-              <SelectItem value="festivo">Festivo</SelectItem>
-              <SelectItem value="special">Especial</SelectItem>
+              <SelectItem value="perros">Perros</SelectItem>
+              <SelectItem value="gatos">Gatos</SelectItem>
+              <SelectItem value="caballos">Caballos</SelectItem>
+              <SelectItem value="sin_animales">Sin animales</SelectItem>
+              <SelectItem value="entorno_natural">Entorno natural</SelectItem>
             </SelectContent>
           </Select>
           {errors.type && (
