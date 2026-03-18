@@ -42,7 +42,9 @@
       "Bash(git push:*)",
       "Bash(cat:*)",
       "Bash(git -C /Users/marcosriganti/Projects/acavall-harmony-next log --oneline)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(gh api:*)",
+      "Bash(git ls-tree:*)"
     ]
   }
 }

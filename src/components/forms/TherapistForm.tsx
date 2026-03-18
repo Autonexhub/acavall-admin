@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import type { Therapist } from '@/types/models';
 
@@ -36,6 +37,7 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
     defaultValues: {
       name: therapist?.name || '',
       specialty: therapist?.specialty || '',
+      staff_type: therapist?.staff_type || 'personal_laboral',
       email: therapist?.email || '',
       phone: therapist?.phone || '',
       is_active: therapist ? Boolean(therapist.is_active) : true,
@@ -45,6 +47,7 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
 
   const isActive = watch('is_active');
   const selectedEntityIds = watch('entity_ids');
+  const staffType = watch('staff_type');
 
   const handleEntityToggle = (entityId: number) => {
     const currentIds = selectedEntityIds || [];
@@ -110,11 +113,32 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="staff_type">Tipo de Personal</Label>
+            <Select
+              value={staffType}
+              onValueChange={(value) => setValue('staff_type', value as 'personal_laboral' | 'personal_apoyo' | 'personal_voluntariado')}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona el tipo de personal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="personal_laboral">Personal Laboral</SelectItem>
+                <SelectItem value="personal_apoyo">Personal de Apoyo</SelectItem>
+                <SelectItem value="personal_voluntariado">Personal Voluntariado</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.staff_type && (
+              <p className="text-sm text-destructive">{errors.staff_type.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="specialty">Especialidad</Label>
             <Input
               id="specialty"
               {...register('specialty')}
-              placeholder="Ej: Psicólogo, Personal Ocupacional"
+              placeholder="Ej: Psicólogo, Terapeuta Ocupacional"
               disabled={isSubmitting}
             />
             {errors.specialty && (

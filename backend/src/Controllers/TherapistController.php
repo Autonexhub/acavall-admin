@@ -108,6 +108,7 @@ class TherapistController
                 'email' => $body['email'] ?? null,
                 'phone' => $body['phone'] ?? null,
                 'specialty' => $body['specialty'] ?? null,
+                'staff_type' => $body['staff_type'] ?? 'personal_laboral',
                 'is_active' => isset($body['is_active']) ? (int)$body['is_active'] : 1
             ];
 
@@ -170,6 +171,7 @@ class TherapistController
             if (isset($body['email'])) $data['email'] = $body['email'];
             if (isset($body['phone'])) $data['phone'] = $body['phone'];
             if (isset($body['specialty'])) $data['specialty'] = $body['specialty'];
+            if (isset($body['staff_type'])) $data['staff_type'] = $body['staff_type'];
             if (isset($body['is_active'])) $data['is_active'] = (int)$body['is_active'];
 
             if (!empty($data)) {

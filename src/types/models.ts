@@ -18,6 +18,7 @@ export interface Therapist {
   id: number;
   name: string;
   specialty?: string;
+  staff_type: 'personal_laboral' | 'personal_apoyo' | 'personal_voluntariado';
   email?: string;
   phone?: string;
   is_active: boolean;

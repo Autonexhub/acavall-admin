@@ -10,6 +10,7 @@ export const loginSchema = z.object({
 export const therapistSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio'),
   specialty: z.string().optional(),
+  staff_type: z.enum(['personal_laboral', 'personal_apoyo', 'personal_voluntariado']).default('personal_laboral'),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   phone: z.string().optional(),
   is_active: z.boolean().default(true),
