@@ -95,6 +95,7 @@ class ProjectController
                 'amount' => isset($body['amount']) ? (float)$body['amount'] : 0,
                 'type' => $body['type'] ?? 'terapia',
                 'funding_type' => $body['funding_type'] ?? 'private_subsidy',
+                'beneficiary_type' => $body['beneficiary_type'] ?? 'otros',
                 'budget_link' => $body['budget_link'] ?? null,
                 'notes' => $body['notes'] ?? null,
             ];
@@ -156,6 +157,7 @@ class ProjectController
             if (isset($body['amount'])) $data['amount'] = (float)$body['amount'];
             if (isset($body['type'])) $data['type'] = $body['type'];
             if (isset($body['funding_type'])) $data['funding_type'] = $body['funding_type'];
+            if (isset($body['beneficiary_type'])) $data['beneficiary_type'] = $body['beneficiary_type'];
             if (isset($body['budget_link'])) $data['budget_link'] = $body['budget_link'];
             if (isset($body['notes'])) $data['notes'] = $body['notes'];
 

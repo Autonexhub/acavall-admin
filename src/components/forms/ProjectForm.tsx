@@ -52,6 +52,7 @@ export function ProjectForm({ project, onSubmit, isSubmitting }: ProjectFormProp
       amount: project?.amount || 0,
       type: project?.type || 'terapia',
       funding_type: project?.funding_type || 'private_subsidy',
+      beneficiary_type: project?.beneficiary_type || 'otros',
       budget_number: project?.budget_number || '',
       budget_link: project?.budget_link || '',
       notes: project?.notes || '',
@@ -62,6 +63,7 @@ export function ProjectForm({ project, onSubmit, isSubmitting }: ProjectFormProp
   const selectedEntityIds = watch('entity_ids') || [];
   const projectType = watch('type');
   const fundingType = watch('funding_type');
+  const beneficiaryType = watch('beneficiary_type');
 
   const handleEntityToggle = (entityId: number) => {
     const currentIds = selectedEntityIds;
@@ -224,6 +226,30 @@ export function ProjectForm({ project, onSubmit, isSubmitting }: ProjectFormProp
                 <SelectItem value="public_subsidy">Subvención Pública</SelectItem>
                 <SelectItem value="private_subsidy">Subvención Privada</SelectItem>
                 <SelectItem value="financiacion_propia">Financiación Propia</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="beneficiary_type">Tipo de Beneficiario</Label>
+            <Select
+              value={beneficiaryType}
+              onValueChange={(value) => setValue('beneficiary_type', value as any)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona el tipo de beneficiario" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="discapacidad_sensorial">Discapacidad sensorial</SelectItem>
+                <SelectItem value="discapacidad_intelectual">Discapacidad intelectual</SelectItem>
+                <SelectItem value="discapacidad_fisica_organica">Discapacidad física y orgánica</SelectItem>
+                <SelectItem value="discapacidad_psicosocial">Discapacidad psicosocial</SelectItem>
+                <SelectItem value="personas_mayores">Personas mayores</SelectItem>
+                <SelectItem value="mujeres_victimas_violencia">Mujeres víctimas de violencia de género</SelectItem>
+                <SelectItem value="menores_riesgo">Menores en riesgo</SelectItem>
+                <SelectItem value="infancia_juventud">Infancia y Juventud</SelectItem>
+                <SelectItem value="cuidadores_familias">Cuidadores y Familias</SelectItem>
+                <SelectItem value="otros">Otros</SelectItem>
               </SelectContent>
             </Select>
           </div>

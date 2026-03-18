@@ -73,6 +73,7 @@ export const projectSchema = z.object({
   amount: z.number().min(0).default(0),
   type: z.enum(['ocio', 'educacion', 'terapia', 'voluntariado', 'formacion', 'otros']).default('terapia'),
   funding_type: z.enum(['public_subsidy', 'private_subsidy', 'financiacion_propia']).default('private_subsidy'),
+  beneficiary_type: z.enum(['discapacidad_sensorial', 'discapacidad_intelectual', 'discapacidad_fisica_organica', 'discapacidad_psicosocial', 'personas_mayores', 'mujeres_victimas_violencia', 'menores_riesgo', 'infancia_juventud', 'cuidadores_familias', 'otros']).default('otros'),
   budget_number: z.string().optional(),
   budget_link: z.string().url('URL inválida').optional().or(z.literal('')),
   notes: z.string().optional(),

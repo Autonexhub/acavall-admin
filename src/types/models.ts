@@ -120,6 +120,7 @@ export interface Project {
   amount: number;
   type: 'ocio' | 'educacion' | 'terapia' | 'voluntariado' | 'formacion' | 'otros';
   funding_type: 'public_subsidy' | 'private_subsidy' | 'financiacion_propia';
+  beneficiary_type: 'discapacidad_sensorial' | 'discapacidad_intelectual' | 'discapacidad_fisica_organica' | 'discapacidad_psicosocial' | 'personas_mayores' | 'mujeres_victimas_violencia' | 'menores_riesgo' | 'infancia_juventud' | 'cuidadores_familias' | 'otros';
   budget_number?: string;
   budget_link?: string;
   notes?: string;

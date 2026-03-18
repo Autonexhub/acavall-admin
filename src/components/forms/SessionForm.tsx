@@ -280,26 +280,82 @@ export function SessionForm({ session, onSubmit, isSubmitting }: SessionFormProp
         </div>
       </div>
 
-      {/* Therapists Multi-select */}
-      <div className="space-y-2">
+      {/* Therapists Multi-select - Grouped by Staff Type */}
+      <div className="space-y-4">
         <Label>Personal Activo</Label>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-lg">
-          {therapists?.filter(t => t.is_active).map((therapist) => (
-            <div key={therapist.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={`therapist-${therapist.id}`}
-                checked={selectedTherapistIds?.includes(therapist.id)}
-                onCheckedChange={() => handleTherapistToggle(therapist.id)}
-              />
-              <label
-                htmlFor={`therapist-${therapist.id}`}
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                {therapist.name}
-              </label>
+
+        {/* Personal Laboral */}
+        {therapists?.filter(t => t.is_active && t.staff_type === 'personal_laboral').length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-muted-foreground">Personal Laboral</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-lg bg-muted/30">
+              {therapists?.filter(t => t.is_active && t.staff_type === 'personal_laboral').map((therapist) => (
+                <div key={therapist.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`therapist-${therapist.id}`}
+                    checked={selectedTherapistIds?.includes(therapist.id)}
+                    onCheckedChange={() => handleTherapistToggle(therapist.id)}
+                  />
+                  <label
+                    htmlFor={`therapist-${therapist.id}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    {therapist.name}
+                  </label>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
+
+        {/* Personal de Apoyo */}
+        {therapists?.filter(t => t.is_active && t.staff_type === 'personal_apoyo').length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-muted-foreground">Personal de Apoyo</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-lg bg-muted/30">
+              {therapists?.filter(t => t.is_active && t.staff_type === 'personal_apoyo').map((therapist) => (
+                <div key={therapist.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`therapist-${therapist.id}`}
+                    checked={selectedTherapistIds?.includes(therapist.id)}
+                    onCheckedChange={() => handleTherapistToggle(therapist.id)}
+                  />
+                  <label
+                    htmlFor={`therapist-${therapist.id}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    {therapist.name}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Personal Voluntariado */}
+        {therapists?.filter(t => t.is_active && t.staff_type === 'personal_voluntariado').length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-muted-foreground">Personal Voluntariado</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4 border rounded-lg bg-muted/30">
+              {therapists?.filter(t => t.is_active && t.staff_type === 'personal_voluntariado').map((therapist) => (
+                <div key={therapist.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`therapist-${therapist.id}`}
+                    checked={selectedTherapistIds?.includes(therapist.id)}
+                    onCheckedChange={() => handleTherapistToggle(therapist.id)}
+                  />
+                  <label
+                    htmlFor={`therapist-${therapist.id}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    {therapist.name}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {errors.therapist_ids && (
           <p className="text-sm text-destructive">{errors.therapist_ids.message}</p>
         )}
