@@ -1,4 +1,4 @@
-import { Calendar, Users, Building2, Clock, BarChart3, Shield, Settings, Home, LogOut, LayoutDashboard, Briefcase } from "lucide-react";
+import { Calendar, Users, Building2, Clock, BarChart3, Shield, Settings, Home, LogOut, LayoutDashboard, Briefcase, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import logoAcavall from "@/assets/logo-acavall.png";
 import {
@@ -15,8 +15,9 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/components/providers/auth-provider";
 import { cn } from "@/lib/utils";
+import { useMemo } from "react";
 
-const navigationItems = [
+const adminNavigationItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Sesiones", url: "/sessions", icon: Calendar },
   { title: "Entidades", url: "/entities", icon: Building2 },
@@ -27,9 +28,20 @@ const navigationItems = [
   { title: "Impacto", url: "/impact", icon: BarChart3 },
 ];
 
+const therapistNavigationItems = [
+  { title: "Mis Sesiones", url: "/my-sessions", icon: Calendar },
+  { title: "Mi Perfil", url: "/my-profile", icon: User },
+];
+
 export function AppSidebar() {
   const { pathname } = useLocation();
   const { logout, user } = useAuth();
+
+  // Determine navigation items based on user role
+  const navigationItems = useMemo(() => {
+    if (!user) return adminNavigationItems;
+    return user.role === 'therapist' ? therapistNavigationItems : adminNavigationItems;
+  }, [user]);
 
   return (
     <Sidebar>
@@ -38,7 +50,9 @@ export function AppSidebar() {
           <img src={logoAcavall} alt="Fundación Acavall" className="h-12 w-auto" />
           <div>
             <h2 className="font-semibold text-sm text-sidebar-foreground">Fundación Acavall</h2>
-            <p className="text-xs text-muted-foreground">Gestión de Sesiones</p>
+            <p className="text-xs text-muted-foreground">
+              {user?.role === 'therapist' ? 'Portal Personal' : 'Gestión de Sesiones'}
+            </p>
           </div>
         </div>
       </SidebarHeader>

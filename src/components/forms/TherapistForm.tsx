@@ -50,6 +50,8 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
       has_certificate_delitos: therapist ? Boolean(therapist.has_certificate_delitos) : false,
       is_active: therapist ? Boolean(therapist.is_active) : true,
       entity_ids: therapist?.entities?.map((e) => e.id) || [],
+      create_user_account: false,
+      user_password: '',
     },
   });
 
@@ -58,6 +60,8 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
   const staffType = watch('staff_type');
   const hasDniPhoto = watch('has_dni_photo');
   const hasCertificateDelitos = watch('has_certificate_delitos');
+  const createUserAccount = watch('create_user_account');
+  const userEmail = watch('email');
 
   const handleEntityToggle = (entityId: number) => {
     const currentIds = selectedEntityIds || [];
@@ -348,6 +352,75 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
           </div>
           {errors.entity_ids && (
             <p className="text-sm text-destructive mt-2">{errors.entity_ids.message}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Cuenta de Usuario</CardTitle>
+          <CardDescription>
+            Crear una cuenta de acceso para que este personal pueda ver sus sesiones y reportes
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="create_user_account"
+              checked={createUserAccount}
+              onCheckedChange={(checked) => setValue('create_user_account', checked as boolean)}
+              disabled={isSubmitting}
+            />
+            <label
+              htmlFor="create_user_account"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              Crear cuenta de acceso al sistema
+            </label>
+          </div>
+
+          {createUserAccount && (
+            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+              <div className="space-y-2">
+                <Label htmlFor="user_email">Email de acceso</Label>
+                <Input
+                  id="user_email"
+                  type="email"
+                  value={userEmail || ''}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se usará el email del personal como nombre de usuario
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="user_password">
+                  Contraseña <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="user_password"
+                  type="password"
+                  {...register('user_password')}
+                  placeholder="Mínimo 6 caracteres"
+                  disabled={isSubmitting}
+                />
+                {errors.user_password && (
+                  <p className="text-sm text-destructive">{errors.user_password.message}</p>
+                )}
+              </div>
+
+              <div className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-3 rounded-md">
+                <p className="font-medium mb-1">ℹ️ Permisos de la cuenta:</p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Podrá ver sus propias sesiones y horas trabajadas</li>
+                  <li>Podrá ver su historial laboral</li>
+                  <li>NO podrá ver información de otros personal</li>
+                  <li>NO podrá crear o editar sesiones</li>
+                </ul>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

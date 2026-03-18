@@ -22,6 +22,9 @@ export const therapistSchema = z.object({
   has_certificate_delitos: z.boolean().default(false),
   is_active: z.boolean().default(true),
   entity_ids: z.array(z.number()).optional(),
+  // User account fields
+  create_user_account: z.boolean().default(false),
+  user_password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional(),
 });
 
 // Session schema

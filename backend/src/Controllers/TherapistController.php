@@ -133,6 +133,33 @@ class TherapistController
                 $this->therapistRepository->attachEntities($id, $body['entity_ids']);
             }
 
+            // Create user account if requested
+            if (!empty($body['create_user_account']) && !empty($body['email']) && !empty($body['user_password'])) {
+                try {
+                    $userRepository = new \App\Repositories\UserRepository($this->therapistRepository->getConnection());
+
+                    // Check if user already exists with this email
+                    $existingUser = $userRepository->findByEmail($body['email']);
+
+                    if (!$existingUser) {
+                        $userId = $userRepository->create([
+                            'name' => $body['name'],
+                            'email' => $body['email'],
+                            'password' => password_hash($body['user_password'], PASSWORD_BCRYPT),
+                            'role' => 'therapist',
+                            'is_active' => 1
+                        ]);
+
+                        // Link user to therapist
+                        if ($userId) {
+                            $this->therapistRepository->update($id, ['user_id' => $userId]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    error_log("Error creating user account for therapist: " . $e->getMessage());
+                }
+            }
+
             $therapist = $this->therapistRepository->findWithWorkHistory($id);
 
             return $this->jsonResponse($response, [

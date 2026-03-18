@@ -27,6 +27,8 @@ import NewUserPage from '@/pages/dashboard/NewUserPage';
 import ProjectsPage from '@/pages/dashboard/ProjectsPage';
 import ProjectDetailPage from '@/pages/dashboard/ProjectDetailPage';
 import NewProjectPage from '@/pages/dashboard/NewProjectPage';
+import MySessionsPage from '@/pages/dashboard/MySessionsPage';
+import MyProfilePage from '@/pages/dashboard/MyProfilePage';
 
 function App() {
   return (
@@ -63,6 +65,8 @@ function App() {
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="projects/:id" element={<ProjectDetailPage />} />
             <Route path="projects/new" element={<NewProjectPage />} />
+            <Route path="my-sessions" element={<MySessionsPage />} />
+            <Route path="my-profile" element={<MyProfilePage />} />
             <Route path="administration" element={<AdministrationPage />} />
           </Route>
 

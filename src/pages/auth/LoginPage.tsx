@@ -26,9 +26,15 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       setIsLoading(true);
-      await login(data as { email: string; password: string });
+      const user = await login(data as { email: string; password: string });
       toast.success('Inicio de sesión exitoso');
-      navigate('/dashboard');
+
+      // Redirect based on user role
+      if (user?.role === 'therapist') {
+        navigate('/my-sessions');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       toast.error(error.message || 'Error al iniciar sesión');
     } finally {
