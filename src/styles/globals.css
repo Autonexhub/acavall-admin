@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 48 15% 97%;
+    --foreground: 0 0% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+    --primary: 51 85% 60%;
+    --primary-foreground: 0 0% 20%;
+    --secondary: 0 0% 45%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 48 15% 94%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 51 85% 60%;
+    --accent-foreground: 0 0% 20%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --border: 48 15% 88%;
+    --input: 48 15% 88%;
+    --ring: 51 85% 60%;
+    --radius: 0.75rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 20%;
+    --sidebar-primary: 51 85% 60%;
+    --sidebar-primary-foreground: 0 0% 20%;
+    --sidebar-accent: 48 15% 97%;
+    --sidebar-accent-foreground: 0 0% 20%;
+    --sidebar-border: 48 15% 88%;
+    --sidebar-ring: 51 85% 60%;
+    --calendar-today: 51 85% 95%;
+    --calendar-session: 51 85% 60%;
+    --calendar-festivo: 0 0% 90%;
+  }
+
+  .dark {
+    --background: 0 0% 12%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 15%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 15%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 51 85% 60%;
+    --primary-foreground: 0 0% 20%;
+    --secondary: 0 0% 25%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 51 85% 60%;
+    --accent-foreground: 0 0% 20%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --border: 0 0% 25%;
+    --input: 0 0% 25%;
+    --ring: 51 85% 60%;
+    --sidebar-background: 0 0% 15%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 51 85% 60%;
+    --sidebar-primary-foreground: 0 0% 20%;
+    --sidebar-accent: 0 0% 20%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 0 0% 25%;
+    --sidebar-ring: 51 85% 60%;
+    --calendar-today: 51 85% 20%;
+    --calendar-session: 51 85% 60%;
+    --calendar-festivo: 0 0% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

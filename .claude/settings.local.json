@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(php -r:*)",
+      "Bash(./scripts/deploy.sh:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(./scripts/setup-database.sh:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(ssh:*)",
+      "Bash(npx playwright install chromium)",
+      "Bash(tree:*)",
+      "Bash(ls:*)",
+      "Bash(xargs:*)",
+      "Bash(npm run test:*)",
+      "Bash(bash:*)",
+      "Bash(pkill:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(npm run test:quick:*)",
+      "Bash(lsof:*)",
+      "Bash(kill:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(mysql:*)",
+      "Bash(tail:*)",
+      "Bash(jq:*)",
+      "Bash(npm run dev:*)",
+      "WebFetch(domain:www.fundacionacavall.com)",
+      "Bash(TOKEN=\"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhY2F2YWxsLWhhcm1vbnkiLCJpYXQiOjE3NzMzOTM2OTcsImV4cCI6MTc3MzM5NzI5Nywic3ViIjozLCJkYXRhIjp7ImlkIjozLCJlbWFpbCI6Im1hcmNvcy5yaWdhbnRpQGdtYWlsLmNvbSIsIm5hbWUiOiJNYXJjb3MiLCJyb2xlIjoiYWRtaW4ifX0.aVMFiuZG97g9iPU6g-8EIi2a-GDCpSPKvn3AVuMl_VY\")",
+      "Bash(__NEW_LINE_ee5ffa36865b20e8__ curl -s 'http://localhost:8000/api/sessions?start_date=2026-03-01&end_date=2026-03-31' --header \"Authorization: Bearer $TOKEN\")",
+      "Bash(php:*)",
+      "Bash(scp:*)",
+      "Bash(grep:*)",
+      "Bash(rsync:*)",
+      "Bash(find:*)",
+      "Bash(test:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

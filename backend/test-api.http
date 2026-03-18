@@ -1,0 +1,42 @@
+### Acavall Harmony API Tests
+### Use with REST Client extension in VS Code or similar tools
+
+@baseUrl = http://localhost:8000/api
+@token =
+
+### Health Check
+GET {{baseUrl}}/health
+
+### Login (get token)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@acavall.org",
+  "password": "admin123"
+}
+
+### Get Current User (requires token)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### Logout
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{token}}
+
+### Test Invalid Credentials
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "wrong@example.com",
+  "password": "wrongpassword"
+}
+
+### Test Missing Fields
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@acavall.org"
+}
