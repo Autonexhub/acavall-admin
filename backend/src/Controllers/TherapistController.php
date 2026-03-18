@@ -109,6 +109,13 @@ class TherapistController
                 'phone' => $body['phone'] ?? null,
                 'specialty' => $body['specialty'] ?? null,
                 'staff_type' => $body['staff_type'] ?? 'personal_laboral',
+                'dni' => $body['dni'] ?? null,
+                'social_security_number' => $body['social_security_number'] ?? null,
+                'account_number' => $body['account_number'] ?? null,
+                'fiscal_address' => $body['fiscal_address'] ?? null,
+                'notes' => $body['notes'] ?? null,
+                'has_dni_photo' => isset($body['has_dni_photo']) ? (int)$body['has_dni_photo'] : 0,
+                'has_certificate_delitos' => isset($body['has_certificate_delitos']) ? (int)$body['has_certificate_delitos'] : 0,
                 'is_active' => isset($body['is_active']) ? (int)$body['is_active'] : 1
             ];
 
@@ -172,6 +179,13 @@ class TherapistController
             if (isset($body['phone'])) $data['phone'] = $body['phone'];
             if (isset($body['specialty'])) $data['specialty'] = $body['specialty'];
             if (isset($body['staff_type'])) $data['staff_type'] = $body['staff_type'];
+            if (isset($body['dni'])) $data['dni'] = $body['dni'];
+            if (isset($body['social_security_number'])) $data['social_security_number'] = $body['social_security_number'];
+            if (isset($body['account_number'])) $data['account_number'] = $body['account_number'];
+            if (isset($body['fiscal_address'])) $data['fiscal_address'] = $body['fiscal_address'];
+            if (isset($body['notes'])) $data['notes'] = $body['notes'];
+            if (isset($body['has_dni_photo'])) $data['has_dni_photo'] = (int)$body['has_dni_photo'];
+            if (isset($body['has_certificate_delitos'])) $data['has_certificate_delitos'] = (int)$body['has_certificate_delitos'];
             if (isset($body['is_active'])) $data['is_active'] = (int)$body['is_active'];
 
             if (!empty($data)) {

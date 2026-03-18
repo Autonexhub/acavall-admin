@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import type { Therapist } from '@/types/models';
 
@@ -40,6 +41,13 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
       staff_type: therapist?.staff_type || 'personal_laboral',
       email: therapist?.email || '',
       phone: therapist?.phone || '',
+      dni: therapist?.dni || '',
+      social_security_number: therapist?.social_security_number || '',
+      account_number: therapist?.account_number || '',
+      fiscal_address: therapist?.fiscal_address || '',
+      notes: therapist?.notes || '',
+      has_dni_photo: therapist ? Boolean(therapist.has_dni_photo) : false,
+      has_certificate_delitos: therapist ? Boolean(therapist.has_certificate_delitos) : false,
       is_active: therapist ? Boolean(therapist.is_active) : true,
       entity_ids: therapist?.entities?.map((e) => e.id) || [],
     },
@@ -48,6 +56,8 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
   const isActive = watch('is_active');
   const selectedEntityIds = watch('entity_ids');
   const staffType = watch('staff_type');
+  const hasDniPhoto = watch('has_dni_photo');
+  const hasCertificateDelitos = watch('has_certificate_delitos');
 
   const handleEntityToggle = (entityId: number) => {
     const currentIds = selectedEntityIds || [];
@@ -189,6 +199,119 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
               onCheckedChange={(checked) => setValue('is_active', checked)}
               disabled={isSubmitting}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Documentación y Datos Fiscales</CardTitle>
+          <CardDescription>
+            Información administrativa y legal del personal
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="dni">DNI / NIE</Label>
+              <Input
+                id="dni"
+                {...register('dni')}
+                placeholder="12345678A"
+                disabled={isSubmitting}
+              />
+              {errors.dni && (
+                <p className="text-sm text-destructive">{errors.dni.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="social_security_number">Nº Seguridad Social</Label>
+              <Input
+                id="social_security_number"
+                {...register('social_security_number')}
+                placeholder="123456789012"
+                disabled={isSubmitting}
+              />
+              {errors.social_security_number && (
+                <p className="text-sm text-destructive">{errors.social_security_number.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="account_number">Nº de Cuenta Bancaria</Label>
+            <Input
+              id="account_number"
+              {...register('account_number')}
+              placeholder="ES00 0000 0000 0000 0000 0000"
+              disabled={isSubmitting}
+            />
+            {errors.account_number && (
+              <p className="text-sm text-destructive">{errors.account_number.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fiscal_address">Dirección Fiscal</Label>
+            <Textarea
+              id="fiscal_address"
+              {...register('fiscal_address')}
+              placeholder="Calle, número, piso, código postal, ciudad"
+              disabled={isSubmitting}
+              rows={2}
+            />
+            {errors.fiscal_address && (
+              <p className="text-sm text-destructive">{errors.fiscal_address.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notas</Label>
+            <Textarea
+              id="notes"
+              {...register('notes')}
+              placeholder="Notas adicionales sobre el personal..."
+              disabled={isSubmitting}
+              rows={3}
+            />
+            {errors.notes && (
+              <p className="text-sm text-destructive">{errors.notes.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <Label>Documentación en Archivo</Label>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="has_dni_photo"
+                checked={hasDniPhoto}
+                onCheckedChange={(checked) => setValue('has_dni_photo', checked as boolean)}
+                disabled={isSubmitting}
+              />
+              <label
+                htmlFor="has_dni_photo"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Foto de DNI
+              </label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="has_certificate_delitos"
+                checked={hasCertificateDelitos}
+                onCheckedChange={(checked) => setValue('has_certificate_delitos', checked as boolean)}
+                disabled={isSubmitting}
+              />
+              <label
+                htmlFor="has_certificate_delitos"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Certificado de Delitos de Naturaleza Sexual
+              </label>
+            </div>
           </div>
         </CardContent>
       </Card>

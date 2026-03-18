@@ -13,6 +13,13 @@ export const therapistSchema = z.object({
   staff_type: z.enum(['personal_laboral', 'personal_apoyo', 'personal_voluntariado']).default('personal_laboral'),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   phone: z.string().optional(),
+  dni: z.string().optional(),
+  social_security_number: z.string().optional(),
+  account_number: z.string().optional(),
+  fiscal_address: z.string().optional(),
+  notes: z.string().optional(),
+  has_dni_photo: z.boolean().default(false),
+  has_certificate_delitos: z.boolean().default(false),
   is_active: z.boolean().default(true),
   entity_ids: z.array(z.number()).optional(),
 });

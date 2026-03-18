@@ -21,6 +21,13 @@ export interface Therapist {
   staff_type: 'personal_laboral' | 'personal_apoyo' | 'personal_voluntariado';
   email?: string;
   phone?: string;
+  dni?: string;
+  social_security_number?: string;
+  account_number?: string;
+  fiscal_address?: string;
+  notes?: string;
+  has_dni_photo: boolean;
+  has_certificate_delitos: boolean;
   is_active: boolean;
   hoursWorked?: number;
   entities?: Entity[];
