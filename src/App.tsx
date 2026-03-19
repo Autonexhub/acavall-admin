@@ -6,6 +6,8 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 // Auth pages
 import LoginPage from '@/pages/auth/LoginPage';
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
 
 // Dashboard pages
 import DashboardLayout from '@/pages/dashboard/DashboardLayout';
@@ -37,6 +39,8 @@ function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Protected routes */}
           <Route

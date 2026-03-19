@@ -6,18 +6,24 @@ namespace App\Controllers;
 
 use App\Repositories\UserRepository;
 use App\Services\JWTService;
+use App\Services\EmailService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use PDO;
 
 class AuthController
 {
     private UserRepository $userRepository;
     private JWTService $jwtService;
+    private EmailService $emailService;
+    private PDO $db;
 
     public function __construct()
     {
         $this->userRepository = new UserRepository();
         $this->jwtService = new JWTService();
+        $this->emailService = new EmailService();
+        $this->db = $this->userRepository->getConnection();
     }
 
     /**
@@ -143,6 +149,192 @@ class AuthController
             'success' => true,
             'data' => $userData
         ], 200);
+    }
+
+    /**
+     * Forgot password endpoint
+     * POST /api/auth/forgot-password
+     *
+     * @param Request $request
+     * @param Response $response
+     * @return Response
+     */
+    public function forgotPassword(Request $request, Response $response): Response
+    {
+        try {
+            $body = $request->getParsedBody();
+            $email = $body['email'] ?? null;
+
+            if (!$email) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Email is required'
+                ], 400);
+            }
+
+            // Find user by email
+            $user = $this->userRepository->findByEmail($email);
+
+            // Always return success to prevent email enumeration
+            if (!$user) {
+                return $this->jsonResponse($response, [
+                    'success' => true,
+                    'message' => 'If the email exists, a password reset link will be sent'
+                ], 200);
+            }
+
+            // Generate secure random token
+            $token = bin2hex(random_bytes(32));
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+1 hour'));
+
+            // Store token in database
+            $stmt = $this->db->prepare(
+                'INSERT INTO password_reset_tokens (email, token, expires_at) VALUES (?, ?, ?)'
+            );
+            $stmt->execute([$email, $token, $expiresAt]);
+
+            // Send password reset email
+            $resetUrl = ($_ENV['FRONTEND_URL'] ?? 'http://localhost:3000') . '/reset-password?token=' . $token;
+            $this->emailService->sendPasswordResetEmail($email, $user['name'], $resetUrl);
+
+            return $this->jsonResponse($response, [
+                'success' => true,
+                'message' => 'If the email exists, a password reset link will be sent'
+            ], 200);
+        } catch (\Exception $e) {
+            error_log('Error in forgotPassword: ' . $e->getMessage());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Failed to process password reset request'
+            ], 500);
+        }
+    }
+
+    /**
+     * Verify reset token endpoint
+     * POST /api/auth/verify-reset-token
+     *
+     * @param Request $request
+     * @param Response $response
+     * @return Response
+     */
+    public function verifyResetToken(Request $request, Response $response): Response
+    {
+        try {
+            $body = $request->getParsedBody();
+            $token = $body['token'] ?? null;
+
+            if (!$token) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Token is required'
+                ], 400);
+            }
+
+            // Check if token exists and is valid
+            $stmt = $this->db->prepare(
+                'SELECT * FROM password_reset_tokens
+                WHERE token = ? AND expires_at > NOW() AND used = 0
+                LIMIT 1'
+            );
+            $stmt->execute([$token]);
+            $resetToken = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$resetToken) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Invalid or expired token'
+                ], 400);
+            }
+
+            return $this->jsonResponse($response, [
+                'success' => true,
+                'message' => 'Token is valid'
+            ], 200);
+        } catch (\Exception $e) {
+            error_log('Error in verifyResetToken: ' . $e->getMessage());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Failed to verify token'
+            ], 500);
+        }
+    }
+
+    /**
+     * Reset password endpoint
+     * POST /api/auth/reset-password
+     *
+     * @param Request $request
+     * @param Response $response
+     * @return Response
+     */
+    public function resetPassword(Request $request, Response $response): Response
+    {
+        try {
+            $body = $request->getParsedBody();
+            $token = $body['token'] ?? null;
+            $password = $body['password'] ?? null;
+
+            if (!$token || !$password) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Token and password are required'
+                ], 400);
+            }
+
+            if (strlen($password) < 6) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Password must be at least 6 characters'
+                ], 400);
+            }
+
+            // Check if token exists and is valid
+            $stmt = $this->db->prepare(
+                'SELECT * FROM password_reset_tokens
+                WHERE token = ? AND expires_at > NOW() AND used = 0
+                LIMIT 1'
+            );
+            $stmt->execute([$token]);
+            $resetToken = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$resetToken) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Invalid or expired token'
+                ], 400);
+            }
+
+            // Find user
+            $user = $this->userRepository->findByEmail($resetToken['email']);
+            if (!$user) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'User not found'
+                ], 404);
+            }
+
+            // Update password
+            $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+            $this->userRepository->update((int)$user['id'], ['password' => $hashedPassword]);
+
+            // Mark token as used
+            $stmt = $this->db->prepare(
+                'UPDATE password_reset_tokens SET used = 1 WHERE token = ?'
+            );
+            $stmt->execute([$token]);
+
+            return $this->jsonResponse($response, [
+                'success' => true,
+                'message' => 'Password reset successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            error_log('Error in resetPassword: ' . $e->getMessage());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Failed to reset password'
+            ], 500);
+        }
     }
 
     /**

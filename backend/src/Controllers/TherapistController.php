@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Repositories\TherapistRepository;
 use App\Repositories\StaffWorkHistoryRepository;
+use App\Services\EmailService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -13,11 +14,13 @@ class TherapistController
 {
     private TherapistRepository $therapistRepository;
     private StaffWorkHistoryRepository $workHistoryRepository;
+    private EmailService $emailService;
 
     public function __construct()
     {
         $this->therapistRepository = new TherapistRepository();
         $this->workHistoryRepository = new StaffWorkHistoryRepository();
+        $this->emailService = new EmailService();
     }
 
     /**
@@ -142,10 +145,11 @@ class TherapistController
                     $existingUser = $userRepository->findByEmail($body['email']);
 
                     if (!$existingUser) {
+                        $plainPassword = $body['user_password'];
                         $userId = $userRepository->create([
                             'name' => $body['name'],
                             'email' => $body['email'],
-                            'password' => password_hash($body['user_password'], PASSWORD_BCRYPT),
+                            'password' => password_hash($plainPassword, PASSWORD_BCRYPT),
                             'role' => 'therapist',
                             'is_active' => 1
                         ]);
@@ -153,6 +157,17 @@ class TherapistController
                         // Link user to therapist
                         if ($userId) {
                             $this->therapistRepository->update($id, ['user_id' => $userId]);
+
+                            // Send welcome email with credentials
+                            try {
+                                $this->emailService->sendWelcomeEmail(
+                                    $body['email'],
+                                    $body['name'],
+                                    $plainPassword
+                                );
+                            } catch (\Exception $e) {
+                                error_log("Error sending welcome email: " . $e->getMessage());
+                            }
                         }
                     }
                 } catch (\Exception $e) {

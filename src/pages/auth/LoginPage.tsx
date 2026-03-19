@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginFormData } from '@/lib/validations/schemas';
@@ -91,6 +91,12 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </Button>
+
+            <div className="text-center">
+              <Link to="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>

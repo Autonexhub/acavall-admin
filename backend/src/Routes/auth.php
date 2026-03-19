@@ -11,6 +11,9 @@ use Slim\Routing\RouteCollectorProxy;
  *
  * Public routes:
  * - POST /api/auth/login
+ * - POST /api/auth/forgot-password
+ * - POST /api/auth/verify-reset-token
+ * - POST /api/auth/reset-password
  *
  * Protected routes (require authentication):
  * - POST /api/auth/logout
@@ -22,6 +25,9 @@ $app->group('/api/auth', function (RouteCollectorProxy $group) {
 
     // Public routes - No authentication required
     $group->post('/login', [$authController, 'login']);
+    $group->post('/forgot-password', [$authController, 'forgotPassword']);
+    $group->post('/verify-reset-token', [$authController, 'verifyResetToken']);
+    $group->post('/reset-password', [$authController, 'resetPassword']);
 
     // Protected routes - Authentication required
     $group->post('/logout', [$authController, 'logout'])
