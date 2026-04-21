@@ -2,55 +2,80 @@ import { useMemo, useState } from 'react';
 import { useSessions } from '@/lib/api/queries/useSessions';
 import { useEntities } from '@/lib/api/queries/useEntities';
 import { useTherapists } from '@/lib/api/queries/useTherapists';
-import { useSendTestEmail } from '@/lib/api/queries/useAuth';
+import { useProjects } from '@/lib/api/queries/useProjects';
 import { StatCard } from '@/components/shared/StatCard';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Clock, Building2, Users, Download, Calendar, Loader2, Mail } from 'lucide-react';
+import { DatePicker } from '@/components/ui/date-picker';
+import { Label } from '@/components/ui/label';
+import { Clock, Building2, Users, Download, Calendar, Loader2, FolderKanban } from 'lucide-react';
 import { toast } from 'sonner';
+import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export default function AdministracionPage() {
-  const [testEmail, setTestEmail] = useState('');
+  // Default to current month
+  const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
+  const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
+
   const { data: sessions, isLoading: sessionsLoading } = useSessions();
   const { data: entitiesData, isLoading: entitiesLoading } = useEntities();
   const { data: therapists, isLoading: therapistsLoading } = useTherapists();
-  const sendTestEmailMutation = useSendTestEmail();
+  const { data: projects, isLoading: projectsLoading } = useProjects();
 
   const entities = entitiesData?.data || [];
 
+  // Filter sessions by date range
+  const filteredSessions = useMemo(() => {
+    if (!sessions) return [];
+    return sessions.filter((session) => {
+      const sessionDate = parseISO(session.date);
+      return isWithinInterval(sessionDate, { start: startDate, end: endDate });
+    });
+  }, [sessions, startDate, endDate]);
+
   const stats = useMemo(() => {
-    if (!sessions || !therapists || !entities || entities.length === 0) {
+    if (!filteredSessions || !therapists || !entities || entities.length === 0) {
       return {
         totalHours: 0,
         totalSessions: 0,
         activeTherapists: 0,
         therapistHours: [],
         entitySessions: [],
+        projectHours: [],
       };
     }
 
-    const totalHours = sessions.reduce((acc, s) => acc + Number(s.hours), 0);
-    const totalSessions = sessions.length;
-    const activeTherapists = therapists.length;
+    const totalHours = filteredSessions.reduce((acc, s) => acc + Number(s.hours), 0);
+    const totalSessions = filteredSessions.length;
+
+    // Count therapists who have sessions in this period
+    const activeTherapistIds = new Set<number>();
+    filteredSessions.forEach((s) => {
+      s.therapists?.forEach((t) => activeTherapistIds.add(t.id));
+    });
+    const activeTherapists = activeTherapistIds.size;
 
     // Calculate hours per therapist
-    const therapistHours = therapists.map((therapist) => {
-      const therapistSessions = sessions.filter((s) =>
-        s.therapists?.some((t) => t.id === therapist.id)
-      );
-      const hours = therapistSessions.reduce((acc, s) => acc + Number(s.hours), 0);
-      return {
-        ...therapist,
-        monthHours: hours,
-        sessions: therapistSessions.length,
-      };
-    });
+    const therapistHours = therapists
+      .map((therapist) => {
+        const therapistSessions = filteredSessions.filter((s) =>
+          s.therapists?.some((t) => t.id === therapist.id)
+        );
+        const hours = therapistSessions.reduce((acc, s) => acc + Number(s.hours), 0);
+        return {
+          ...therapist,
+          monthHours: hours,
+          sessions: therapistSessions.length,
+        };
+      })
+      .filter((t) => t.sessions > 0)
+      .sort((a, b) => b.monthHours - a.monthHours);
 
     // Calculate sessions per entity
     const entitySessions = entities
       .map((entity) => {
-        const entitySessionsList = sessions.filter((s) => s.entity_id === entity.id);
+        const entitySessionsList = filteredSessions.filter((s) => s.entity_id === entity.id);
         const hours = entitySessionsList.reduce((acc, s) => acc + Number(s.hours), 0);
         return {
           ...entity,
@@ -58,7 +83,22 @@ export default function AdministracionPage() {
           hours,
         };
       })
-      .filter((e) => e.sessions > 0);
+      .filter((e) => e.sessions > 0)
+      .sort((a, b) => b.hours - a.hours);
+
+    // Calculate hours per project
+    const projectHours = (projects || [])
+      .map((project) => {
+        const projectSessionsList = filteredSessions.filter((s) => s.project_id === project.id);
+        const hours = projectSessionsList.reduce((acc, s) => acc + Number(s.hours), 0);
+        return {
+          ...project,
+          sessions: projectSessionsList.length,
+          hours,
+        };
+      })
+      .filter((p) => p.sessions > 0)
+      .sort((a, b) => b.hours - a.hours);
 
     return {
       totalHours,
@@ -66,29 +106,63 @@ export default function AdministracionPage() {
       activeTherapists,
       therapistHours,
       entitySessions,
+      projectHours,
     };
-  }, [sessions, therapists, entities]);
+  }, [filteredSessions, therapists, entities, projects]);
 
   const handleExport = () => {
-    toast.info('Función de exportación en desarrollo');
+    const dateRangeStr = `${format(startDate, 'dd/MM/yyyy')} - ${format(endDate, 'dd/MM/yyyy')}`;
+
+    // Build CSV content
+    let csv = '';
+
+    // Header with date range
+    csv += `INFORME DE ADMINISTRACIÓN\n`;
+    csv += `Período: ${dateRangeStr}\n`;
+    csv += `Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es })}\n\n`;
+
+    // Summary
+    csv += `RESUMEN\n`;
+    csv += `Horas Totales,${stats.totalHours.toFixed(2)}\n`;
+    csv += `Sesiones Realizadas,${stats.totalSessions}\n`;
+    csv += `Personal Activo,${stats.activeTherapists}\n\n`;
+
+    // Hours by Staff
+    csv += `HORAS POR PERSONAL\n`;
+    csv += `Nombre,Sesiones,Horas\n`;
+    stats.therapistHours.forEach((t) => {
+      csv += `"${t.name}",${t.sessions},${t.monthHours.toFixed(2)}\n`;
+    });
+    csv += `\n`;
+
+    // Hours by Project
+    csv += `HORAS POR PROYECTO\n`;
+    csv += `Proyecto,Sesiones,Horas\n`;
+    stats.projectHours.forEach((p) => {
+      csv += `"${p.name}",${p.sessions},${p.hours.toFixed(2)}\n`;
+    });
+    csv += `\n`;
+
+    // Sessions by Entity
+    csv += `SESIONES POR ENTIDAD\n`;
+    csv += `Entidad,Sesiones,Horas\n`;
+    stats.entitySessions.forEach((e) => {
+      csv += `"${e.name}",${e.sessions},${e.hours.toFixed(2)}\n`;
+    });
+
+    // Create and download the file
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const fileName = `informe_administracion_${format(startDate, 'yyyyMMdd')}_${format(endDate, 'yyyyMMdd')}.csv`;
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(link.href);
+
+    toast.success(`Informe exportado: ${fileName}`);
   };
 
-  const handleSendTestEmail = async () => {
-    if (!testEmail) {
-      toast.error('Por favor ingresa un email');
-      return;
-    }
-
-    try {
-      await sendTestEmailMutation.mutateAsync(testEmail);
-      toast.success(`Email de prueba enviado a ${testEmail}`);
-      setTestEmail('');
-    } catch (error) {
-      toast.error('Error al enviar email de prueba');
-    }
-  };
-
-  const isLoading = sessionsLoading || entitiesLoading || therapistsLoading;
+  const isLoading = sessionsLoading || entitiesLoading || therapistsLoading || projectsLoading;
 
   if (isLoading) {
     return (
@@ -111,48 +185,33 @@ export default function AdministracionPage() {
         </Button>
       </div>
 
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-          <Mail className="h-5 w-5" />
-          Probar Configuración de Email
-        </h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Envía un email de prueba para verificar que la configuración SMTP está funcionando correctamente.
-        </p>
-        <div className="flex gap-3">
-          <Input
-            type="email"
-            placeholder="email@ejemplo.com"
-            value={testEmail}
-            onChange={(e) => setTestEmail(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleSendTestEmail();
-              }
-            }}
-          />
-          <Button
-            onClick={handleSendTestEmail}
-            disabled={sendTestEmailMutation.isPending || !testEmail}
-          >
-            {sendTestEmailMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Enviando...
-              </>
-            ) : (
-              <>
-                <Mail className="h-4 w-4 mr-2" />
-                Enviar Prueba
-              </>
-            )}
-          </Button>
+      <Card className="p-4">
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="space-y-2">
+            <Label>Fecha Inicio</Label>
+            <DatePicker
+              date={startDate}
+              onDateChange={(date) => date && setStartDate(date)}
+              placeholder="Fecha inicio"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Fecha Fin</Label>
+            <DatePicker
+              date={endDate}
+              onDateChange={(date) => date && setEndDate(date)}
+              placeholder="Fecha fin"
+            />
+          </div>
+          <div className="text-sm text-muted-foreground pb-2">
+            Mostrando datos del {format(startDate, 'dd MMM yyyy', { locale: es })} al {format(endDate, 'dd MMM yyyy', { locale: es })}
+          </div>
         </div>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
-          title="Horas Totales Mes"
+          title="Horas Totales"
           value={`${stats.totalHours.toFixed(2)}h`}
           icon={Clock}
         />
@@ -186,7 +245,7 @@ export default function AdministracionPage() {
                   <div>
                     <p className="font-semibold text-foreground">{therapist.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {therapist.sessions} sesiones realizadas
+                      {therapist.sessions} sesiones
                     </p>
                   </div>
                 </div>
@@ -194,14 +253,50 @@ export default function AdministracionPage() {
                   <p className="text-2xl font-bold text-foreground">
                     {therapist.monthHours.toFixed(2)}h
                   </p>
-                  <p className="text-sm text-muted-foreground">este mes</p>
                 </div>
               </div>
             ))
           ) : (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
-                No hay datos de personal disponibles
+                No hay datos de personal en este período
+              </p>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold text-foreground mb-6">
+          Horas por Proyecto
+        </h2>
+        <div className="space-y-4">
+          {stats.projectHours.length > 0 ? (
+            stats.projectHours.map((project) => (
+              <div
+                key={project.id}
+                className="flex items-center justify-between p-4 bg-muted rounded-lg"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <FolderKanban className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">{project.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {project.sessions} sesiones
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-foreground">{project.hours.toFixed(2)}h</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                No hay datos de proyectos en este período
               </p>
             </div>
           )}
@@ -235,14 +330,13 @@ export default function AdministracionPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-foreground">{entity.hours.toFixed(2)}h</p>
-                  <p className="text-sm text-muted-foreground">total</p>
                 </div>
               </div>
             ))
           ) : (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
-                No hay datos de entidades disponibles
+                No hay datos de entidades en este período
               </p>
             </div>
           )}
