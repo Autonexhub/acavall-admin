@@ -27,9 +27,16 @@ yarn-error.log*
 .env*.local
 .env
 .env.production
+backend/.env
+backend/.env.local
+backend/.env.production
 
 # Deployment artifacts
 deploy/
+
+# Debug files
+backend/public/debug.php
+debug.php
 
 # Vercel
 .vercel

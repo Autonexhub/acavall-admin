@@ -5,12 +5,21 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Repositories\ProjectRepository;
+use App\Helpers\DataSanitizer;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 class ProjectController
 {
     private ProjectRepository $projectRepository;
+
+    private const PROJECT_TYPES = ['ocio', 'educacion', 'terapia', 'voluntariado', 'formacion', 'otros'];
+    private const FUNDING_TYPES = ['public_subsidy', 'private_subsidy', 'financiacion_propia'];
+    private const BENEFICIARY_TYPES = [
+        'discapacidad_sensorial', 'discapacidad_intelectual', 'discapacidad_fisica_organica',
+        'discapacidad_psicosocial', 'personas_mayores', 'mujeres_victimas_violencia',
+        'menores_riesgo', 'infancia_juventud', 'cuidadores_familias', 'otros'
+    ];
 
     public function __construct()
     {
@@ -86,21 +95,22 @@ class ProjectController
             }
 
             $data = [
-                'name' => $body['name'],
-                'description' => $body['description'] ?? null,
-                'start_date' => $body['start_date'] ?? null,
-                'end_date' => $body['end_date'] ?? null,
-                'num_sessions' => isset($body['num_sessions']) ? (int)$body['num_sessions'] : 0,
-                'beneficiaries' => isset($body['beneficiaries']) ? (int)$body['beneficiaries'] : 0,
-                'beneficiaries_female' => isset($body['beneficiaries_female']) ? (int)$body['beneficiaries_female'] : 0,
-                'beneficiaries_male' => isset($body['beneficiaries_male']) ? (int)$body['beneficiaries_male'] : 0,
-                'average_age' => isset($body['average_age']) && $body['average_age'] !== '' ? (float)$body['average_age'] : null,
-                'amount' => isset($body['amount']) ? (float)$body['amount'] : 0,
-                'type' => $body['type'] ?? 'terapia',
-                'funding_type' => $body['funding_type'] ?? 'private_subsidy',
-                'beneficiary_type' => $body['beneficiary_type'] ?? 'otros',
-                'budget_link' => $body['budget_link'] ?? null,
-                'notes' => $body['notes'] ?? null,
+                'name' => DataSanitizer::string($body['name']),
+                'description' => DataSanitizer::string($body['description'] ?? null),
+                'start_date' => DataSanitizer::date($body['start_date'] ?? null),
+                'end_date' => DataSanitizer::date($body['end_date'] ?? null),
+                'num_sessions' => DataSanitizer::int($body['num_sessions'] ?? null, 0),
+                'beneficiaries' => DataSanitizer::int($body['beneficiaries'] ?? null, 0),
+                'beneficiaries_female' => DataSanitizer::int($body['beneficiaries_female'] ?? null, 0),
+                'beneficiaries_male' => DataSanitizer::int($body['beneficiaries_male'] ?? null, 0),
+                'average_age' => DataSanitizer::float($body['average_age'] ?? null),
+                'amount' => DataSanitizer::float($body['amount'] ?? null, 0.0),
+                'type' => DataSanitizer::enum($body['type'] ?? null, self::PROJECT_TYPES, 'terapia'),
+                'funding_type' => DataSanitizer::enum($body['funding_type'] ?? null, self::FUNDING_TYPES, 'private_subsidy'),
+                'beneficiary_type' => DataSanitizer::enum($body['beneficiary_type'] ?? null, self::BENEFICIARY_TYPES, 'otros'),
+                'budget_number' => DataSanitizer::string($body['budget_number'] ?? null),
+                'budget_link' => DataSanitizer::url($body['budget_link'] ?? null),
+                'notes' => DataSanitizer::string($body['notes'] ?? null),
             ];
 
             $id = $this->projectRepository->create($data);
@@ -151,21 +161,22 @@ class ProjectController
             }
 
             $data = [];
-            if (isset($body['name'])) $data['name'] = $body['name'];
-            if (isset($body['description'])) $data['description'] = $body['description'];
-            if (isset($body['start_date'])) $data['start_date'] = $body['start_date'];
-            if (isset($body['end_date'])) $data['end_date'] = $body['end_date'];
-            if (isset($body['num_sessions'])) $data['num_sessions'] = (int)$body['num_sessions'];
-            if (isset($body['beneficiaries'])) $data['beneficiaries'] = (int)$body['beneficiaries'];
-            if (isset($body['beneficiaries_female'])) $data['beneficiaries_female'] = (int)$body['beneficiaries_female'];
-            if (isset($body['beneficiaries_male'])) $data['beneficiaries_male'] = (int)$body['beneficiaries_male'];
-            if (array_key_exists('average_age', $body)) $data['average_age'] = $body['average_age'] !== '' && $body['average_age'] !== null ? (float)$body['average_age'] : null;
-            if (isset($body['amount'])) $data['amount'] = (float)$body['amount'];
-            if (isset($body['type'])) $data['type'] = $body['type'];
-            if (isset($body['funding_type'])) $data['funding_type'] = $body['funding_type'];
-            if (isset($body['beneficiary_type'])) $data['beneficiary_type'] = $body['beneficiary_type'];
-            if (isset($body['budget_link'])) $data['budget_link'] = $body['budget_link'];
-            if (isset($body['notes'])) $data['notes'] = $body['notes'];
+            if (isset($body['name'])) $data['name'] = DataSanitizer::string($body['name']);
+            if (array_key_exists('description', $body)) $data['description'] = DataSanitizer::string($body['description']);
+            if (array_key_exists('start_date', $body)) $data['start_date'] = DataSanitizer::date($body['start_date']);
+            if (array_key_exists('end_date', $body)) $data['end_date'] = DataSanitizer::date($body['end_date']);
+            if (isset($body['num_sessions'])) $data['num_sessions'] = DataSanitizer::int($body['num_sessions'], 0);
+            if (isset($body['beneficiaries'])) $data['beneficiaries'] = DataSanitizer::int($body['beneficiaries'], 0);
+            if (isset($body['beneficiaries_female'])) $data['beneficiaries_female'] = DataSanitizer::int($body['beneficiaries_female'], 0);
+            if (isset($body['beneficiaries_male'])) $data['beneficiaries_male'] = DataSanitizer::int($body['beneficiaries_male'], 0);
+            if (array_key_exists('average_age', $body)) $data['average_age'] = DataSanitizer::float($body['average_age']);
+            if (isset($body['amount'])) $data['amount'] = DataSanitizer::float($body['amount'], 0.0);
+            if (isset($body['type'])) $data['type'] = DataSanitizer::enum($body['type'], self::PROJECT_TYPES, 'terapia');
+            if (isset($body['funding_type'])) $data['funding_type'] = DataSanitizer::enum($body['funding_type'], self::FUNDING_TYPES, 'private_subsidy');
+            if (isset($body['beneficiary_type'])) $data['beneficiary_type'] = DataSanitizer::enum($body['beneficiary_type'], self::BENEFICIARY_TYPES, 'otros');
+            if (array_key_exists('budget_number', $body)) $data['budget_number'] = DataSanitizer::string($body['budget_number']);
+            if (array_key_exists('budget_link', $body)) $data['budget_link'] = DataSanitizer::url($body['budget_link']);
+            if (array_key_exists('notes', $body)) $data['notes'] = DataSanitizer::string($body['notes']);
 
             if (!empty($data)) {
                 $success = $this->projectRepository->update($id, $data);

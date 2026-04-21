@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Repositories\SessionRepository;
 use App\Services\RecurringSessionService;
+use App\Helpers\DataSanitizer;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -13,6 +14,8 @@ class SessionController
 {
     private SessionRepository $sessionRepository;
     private RecurringSessionService $recurringService;
+
+    private const SESSION_TYPES = ['perros', 'gatos', 'caballos', 'sin_animales', 'entorno_natural'];
 
     public function __construct()
     {
@@ -139,17 +142,17 @@ class SessionController
                 ], 400);
             }
 
-            // Prepare base data
+            // Prepare base data with sanitization
             $data = [
-                'date' => $body['date'],
-                'entity_id' => (int)$body['entity_id'],
-                'project_id' => !empty($body['project_id']) ? (int)$body['project_id'] : null,
-                'start_time' => $body['start_time'] ?? '00:00:00',
-                'end_time' => $body['end_time'] ?? '00:00:00',
-                'hours' => !empty($body['hours']) ? (float)$body['hours'] : 0,
-                'participants' => !empty($body['participants']) ? (int)$body['participants'] : 0,
-                'type' => $body['type'] ?? 'caballos',
-                'notes' => $body['notes'] ?? null,
+                'date' => DataSanitizer::date($body['date']),
+                'entity_id' => DataSanitizer::int($body['entity_id']),
+                'project_id' => !empty($body['project_id']) ? DataSanitizer::int($body['project_id']) : null,
+                'start_time' => DataSanitizer::time($body['start_time'] ?? null) ?? '00:00:00',
+                'end_time' => DataSanitizer::time($body['end_time'] ?? null) ?? '00:00:00',
+                'hours' => DataSanitizer::float($body['hours'] ?? null, 0.0),
+                'participants' => DataSanitizer::int($body['participants'] ?? null, 0),
+                'type' => DataSanitizer::enum($body['type'] ?? null, self::SESSION_TYPES, 'caballos'),
+                'notes' => DataSanitizer::string($body['notes'] ?? null),
                 'created_by' => $request->getAttribute('user_id')
             ];
 
@@ -238,16 +241,17 @@ class SessionController
                 ], 404);
             }
 
-            // Prepare data (only include fields that are present)
+            // Prepare data with sanitization (only include fields that are present)
             $data = [];
-            if (isset($body['date'])) $data['date'] = $body['date'];
-            if (isset($body['entity_id'])) $data['entity_id'] = (int)$body['entity_id'];
-            if (isset($body['start_time'])) $data['start_time'] = $body['start_time'];
-            if (isset($body['end_time'])) $data['end_time'] = $body['end_time'];
-            if (isset($body['hours'])) $data['hours'] = (float)$body['hours'];
-            if (isset($body['participants'])) $data['participants'] = (int)$body['participants'];
-            if (isset($body['type'])) $data['type'] = $body['type'];
-            if (isset($body['notes'])) $data['notes'] = $body['notes'];
+            if (isset($body['date'])) $data['date'] = DataSanitizer::date($body['date']);
+            if (isset($body['entity_id'])) $data['entity_id'] = DataSanitizer::int($body['entity_id']);
+            if (isset($body['project_id'])) $data['project_id'] = !empty($body['project_id']) ? DataSanitizer::int($body['project_id']) : null;
+            if (isset($body['start_time'])) $data['start_time'] = DataSanitizer::time($body['start_time']) ?? '00:00:00';
+            if (isset($body['end_time'])) $data['end_time'] = DataSanitizer::time($body['end_time']) ?? '00:00:00';
+            if (isset($body['hours'])) $data['hours'] = DataSanitizer::float($body['hours'], 0.0);
+            if (isset($body['participants'])) $data['participants'] = DataSanitizer::int($body['participants'], 0);
+            if (isset($body['type'])) $data['type'] = DataSanitizer::enum($body['type'], self::SESSION_TYPES, 'caballos');
+            if (array_key_exists('notes', $body)) $data['notes'] = DataSanitizer::string($body['notes']);
 
             if (!empty($data)) {
                 $success = $this->sessionRepository->update($id, $data);
