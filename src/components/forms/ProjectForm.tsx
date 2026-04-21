@@ -49,6 +49,9 @@ export function ProjectForm({ project, onSubmit, isSubmitting }: ProjectFormProp
       end_date: project?.end_date || '',
       num_sessions: project?.num_sessions || 0,
       beneficiaries: project?.beneficiaries || 0,
+      beneficiaries_female: project?.beneficiaries_female || 0,
+      beneficiaries_male: project?.beneficiaries_male || 0,
+      average_age: project?.average_age || undefined,
       amount: project?.amount || 0,
       type: project?.type || 'terapia',
       funding_type: project?.funding_type || 'private_subsidy',
@@ -170,7 +173,7 @@ export function ProjectForm({ project, onSubmit, isSubmitting }: ProjectFormProp
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="beneficiaries">Beneficiarios</Label>
+              <Label htmlFor="beneficiaries">Total Beneficiarios</Label>
               <Input
                 id="beneficiaries"
                 type="number"
@@ -188,6 +191,44 @@ export function ProjectForm({ project, onSubmit, isSubmitting }: ProjectFormProp
                 step="0.01"
                 min="0"
                 {...register('amount', { valueAsNumber: true })}
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="beneficiaries_female">Nº de Mujeres</Label>
+              <Input
+                id="beneficiaries_female"
+                type="number"
+                min="0"
+                {...register('beneficiaries_female', { valueAsNumber: true })}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="beneficiaries_male">Nº de Hombres</Label>
+              <Input
+                id="beneficiaries_male"
+                type="number"
+                min="0"
+                {...register('beneficiaries_male', { valueAsNumber: true })}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="average_age">Edad Media</Label>
+              <Input
+                id="average_age"
+                type="number"
+                min="0"
+                max="120"
+                step="0.1"
+                {...register('average_age', { valueAsNumber: true })}
+                placeholder="Ej: 35.5"
                 disabled={isSubmitting}
               />
             </div>

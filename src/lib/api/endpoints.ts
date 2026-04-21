@@ -6,6 +6,9 @@ export const API_ENDPOINTS = {
     logout: '/auth/logout',
     me: '/auth/me',
     refresh: '/auth/refresh',
+    impersonate: (userId: number) => `/auth/impersonate/${userId}`,
+    stopImpersonating: '/auth/stop-impersonating',
+    testEmail: '/auth/test-email',
   },
 
   // Centers

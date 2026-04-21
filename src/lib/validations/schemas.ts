@@ -11,7 +11,9 @@ export const therapistSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio'),
   specialty: z.string().optional(),
   staff_type: z.enum(['personal_laboral', 'personal_apoyo', 'personal_voluntariado']).default('personal_laboral'),
-  email: z.string().email('Email inválido').optional().or(z.literal('')),
+  email: z.string().optional().refine((val) => !val || z.string().email().safeParse(val).success, {
+    message: 'Email inválido',
+  }),
   phone: z.string().optional(),
   dni: z.string().optional(),
   social_security_number: z.string().optional(),
@@ -27,6 +29,16 @@ export const therapistSchema = z.object({
   user_password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional(),
 });
 
+// Recurrence rule schema
+const recurrenceRuleSchema = z.object({
+  frequency: z.enum(['daily', 'weekly', 'monthly']),
+  interval: z.number().min(1).max(52),
+  daysOfWeek: z.array(z.number().min(0).max(6)).optional(),
+  endType: z.enum(['never', 'date', 'count']),
+  endDate: z.string().optional(),
+  endCount: z.number().min(1).max(365).optional(),
+});
+
 // Session schema
 export const sessionSchema = z.object({
   entity_id: z.number({ required_error: 'La entidad es obligatoria' }),
@@ -39,6 +51,7 @@ export const sessionSchema = z.object({
   notes: z.string().optional(),
   type: z.enum(['perros', 'gatos', 'caballos', 'sin_animales', 'entorno_natural']).default('caballos'),
   therapist_ids: z.array(z.number()).min(1, 'Debe asignar al menos un terapeuta'),
+  recurrence_rule: recurrenceRuleSchema.nullable().optional(),
 });
 
 // Entity schema
@@ -73,6 +86,9 @@ export const projectSchema = z.object({
   end_date: z.string().optional(),
   num_sessions: z.number().min(0).default(0),
   beneficiaries: z.number().min(0).default(0),
+  beneficiaries_female: z.number().min(0).default(0),
+  beneficiaries_male: z.number().min(0).default(0),
+  average_age: z.number().min(0).max(120).optional(),
   amount: z.number().min(0).default(0),
   type: z.enum(['ocio', 'educacion', 'terapia', 'voluntariado', 'formacion', 'otros']).default('terapia'),
   funding_type: z.enum(['public_subsidy', 'private_subsidy', 'financiacion_propia']).default('private_subsidy'),

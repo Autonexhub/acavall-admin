@@ -4,15 +4,28 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
 class EmailService
 {
     private string $fromEmail;
     private string $fromName;
+    private string $smtpHost;
+    private int $smtpPort;
+    private bool $smtpSecure;
+    private string $smtpUser;
+    private string $smtpPass;
 
     public function __construct()
     {
-        $this->fromEmail = $_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@fundacionacavall.com';
-        $this->fromName = $_ENV['MAIL_FROM_NAME'] ?? 'Fundación Acavall';
+        $this->fromEmail = $_ENV['SMTP_FROM_EMAIL'] ?? $_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@fundacionacavall.com';
+        $this->fromName = $_ENV['SMTP_FROM_NAME'] ?? $_ENV['MAIL_FROM_NAME'] ?? 'Fundación Acavall';
+        $this->smtpHost = $_ENV['SMTP_HOST'] ?? 'localhost';
+        $this->smtpPort = (int)($_ENV['SMTP_PORT'] ?? 587);
+        $this->smtpSecure = filter_var($_ENV['SMTP_SECURE'] ?? 'true', FILTER_VALIDATE_BOOLEAN);
+        $this->smtpUser = $_ENV['SMTP_USER'] ?? '';
+        $this->smtpPass = $_ENV['SMTP_PASS'] ?? '';
     }
 
     /**
@@ -52,7 +65,7 @@ class EmailService
     }
 
     /**
-     * Send email using PHP mail function
+     * Send email using PHPMailer with SMTP
      *
      * @param string $to
      * @param string $subject
@@ -63,32 +76,33 @@ class EmailService
     private function sendEmail(string $to, string $subject, string $htmlBody, string $plainBody): bool
     {
         try {
-            // Create a unique boundary
-            $boundary = md5(uniqid(time()));
+            $mail = new PHPMailer(true);
 
-            // Headers
-            $headers = [
-                'From: ' . $this->fromName . ' <' . $this->fromEmail . '>',
-                'Reply-To: ' . $this->fromEmail,
-                'MIME-Version: 1.0',
-                'Content-Type: multipart/alternative; boundary="' . $boundary . '"'
-            ];
+            // Server settings
+            $mail->isSMTP();
+            $mail->Host = $this->smtpHost;
+            $mail->SMTPAuth = true;
+            $mail->Username = $this->smtpUser;
+            $mail->Password = $this->smtpPass;
+            $mail->SMTPSecure = $this->smtpSecure ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = $this->smtpPort;
+            $mail->CharSet = 'UTF-8';
 
-            // Message body
-            $message = "--{$boundary}\r\n";
-            $message .= "Content-Type: text/plain; charset=UTF-8\r\n";
-            $message .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
-            $message .= $plainBody . "\r\n\r\n";
+            // Sender
+            $mail->setFrom($this->fromEmail, $this->fromName);
+            $mail->addReplyTo($this->fromEmail, $this->fromName);
 
-            $message .= "--{$boundary}\r\n";
-            $message .= "Content-Type: text/html; charset=UTF-8\r\n";
-            $message .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
-            $message .= $htmlBody . "\r\n\r\n";
+            // Recipient
+            $mail->addAddress($to);
 
-            $message .= "--{$boundary}--";
+            // Content
+            $mail->isHTML(true);
+            $mail->Subject = $subject;
+            $mail->Body = $htmlBody;
+            $mail->AltBody = $plainBody;
 
             // Send email
-            $result = mail($to, $subject, $message, implode("\r\n", $headers));
+            $result = $mail->send();
 
             if ($result) {
                 error_log("Email sent successfully to: {$to}");
@@ -97,10 +111,70 @@ class EmailService
             }
 
             return $result;
+        } catch (Exception $e) {
+            error_log("PHPMailer Error: " . $e->getMessage());
+            return false;
         } catch (\Exception $e) {
             error_log("Error sending email: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Test email configuration by sending a test email
+     *
+     * @param string $toEmail
+     * @return bool
+     */
+    public function sendTestEmail(string $toEmail): bool
+    {
+        $subject = 'Test Email - Fundación Acavall';
+
+        $htmlBody = "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #F7DC6F; padding: 30px; text-align: center; }
+                .content { background-color: #f9f9f9; padding: 30px; }
+                .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1 style='margin: 0; color: #333;'>Fundación Acavall</h1>
+                </div>
+                <div class='content'>
+                    <h2>Email de Prueba</h2>
+                    <p>Este es un email de prueba para verificar la configuración SMTP.</p>
+                    <p>Si recibes este mensaje, significa que la configuración de correo está funcionando correctamente.</p>
+                    <p><strong>Hora de envío:</strong> " . date('Y-m-d H:i:s') . "</p>
+                </div>
+                <div class='footer'>
+                    <p>&copy; " . date('Y') . " Fundación Acavall. Todos los derechos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        ";
+
+        $plainBody = "
+Email de Prueba - Fundación Acavall
+
+Este es un email de prueba para verificar la configuración SMTP.
+
+Si recibes este mensaje, significa que la configuración de correo está funcionando correctamente.
+
+Hora de envío: " . date('Y-m-d H:i:s') . "
+
+Fundación Acavall
+" . date('Y');
+
+        return $this->sendEmail($toEmail, $subject, $htmlBody, $plainBody);
     }
 
     /**

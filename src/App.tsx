@@ -3,6 +3,8 @@ import { Toaster } from 'sonner';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import RoleGuard from '@/components/auth/RoleGuard';
+import RoleBasedRedirect from '@/components/auth/RoleBasedRedirect';
 
 // Auth pages
 import LoginPage from '@/pages/auth/LoginPage';
@@ -30,6 +32,7 @@ import ProjectsPage from '@/pages/dashboard/ProjectsPage';
 import ProjectDetailPage from '@/pages/dashboard/ProjectDetailPage';
 import NewProjectPage from '@/pages/dashboard/NewProjectPage';
 import MySessionsPage from '@/pages/dashboard/MySessionsPage';
+import MyReportsPage from '@/pages/dashboard/MyReportsPage';
 import MyProfilePage from '@/pages/dashboard/MyProfilePage';
 
 function App() {
@@ -51,27 +54,104 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="entities" element={<EntitiesPage />} />
-            <Route path="entities/:id" element={<EntityDetailPage />} />
-            <Route path="entities/new" element={<NewEntityPage />} />
-            <Route path="staff" element={<TherapistsPage />} />
-            <Route path="staff/:id" element={<TherapistDetailPage />} />
-            <Route path="staff/new" element={<NewTherapistPage />} />
-            <Route path="sessions" element={<SessionsPage />} />
-            <Route path="sessions/:id" element={<SessionDetailPage />} />
-            <Route path="sessions/new" element={<NewSessionPage />} />
-            <Route path="impact" element={<ImpactPage />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="users/:id" element={<UserDetailPage />} />
-            <Route path="users/new" element={<NewUserPage />} />
-            <Route path="projects" element={<ProjectsPage />} />
-            <Route path="projects/:id" element={<ProjectDetailPage />} />
-            <Route path="projects/new" element={<NewProjectPage />} />
+            <Route index element={<RoleBasedRedirect />} />
+
+            {/* Admin/Coordinator only routes */}
+            <Route path="dashboard" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <DashboardPage />
+              </RoleGuard>
+            } />
+            <Route path="entities" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <EntitiesPage />
+              </RoleGuard>
+            } />
+            <Route path="entities/:id" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <EntityDetailPage />
+              </RoleGuard>
+            } />
+            <Route path="entities/new" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <NewEntityPage />
+              </RoleGuard>
+            } />
+            <Route path="staff" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <TherapistsPage />
+              </RoleGuard>
+            } />
+            <Route path="staff/:id" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <TherapistDetailPage />
+              </RoleGuard>
+            } />
+            <Route path="staff/new" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <NewTherapistPage />
+              </RoleGuard>
+            } />
+            <Route path="sessions" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <SessionsPage />
+              </RoleGuard>
+            } />
+            <Route path="sessions/:id" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <SessionDetailPage />
+              </RoleGuard>
+            } />
+            <Route path="sessions/new" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <NewSessionPage />
+              </RoleGuard>
+            } />
+            <Route path="impact" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <ImpactPage />
+              </RoleGuard>
+            } />
+            <Route path="users" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <UsersPage />
+              </RoleGuard>
+            } />
+            <Route path="users/:id" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <UserDetailPage />
+              </RoleGuard>
+            } />
+            <Route path="users/new" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <NewUserPage />
+              </RoleGuard>
+            } />
+            <Route path="projects" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <ProjectsPage />
+              </RoleGuard>
+            } />
+            <Route path="projects/:id" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <ProjectDetailPage />
+              </RoleGuard>
+            } />
+            <Route path="projects/new" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <NewProjectPage />
+              </RoleGuard>
+            } />
+            <Route path="administration" element={
+              <RoleGuard allowedRoles={['admin', 'coordinator']}>
+                <AdministrationPage />
+              </RoleGuard>
+            } />
+
+            {/* Therapist routes - accessible by all authenticated users */}
             <Route path="my-sessions" element={<MySessionsPage />} />
+            <Route path="my-reports" element={<MyReportsPage />} />
             <Route path="my-profile" element={<MyProfilePage />} />
-            <Route path="administration" element={<AdministrationPage />} />
           </Route>
 
           {/* Catch all */}

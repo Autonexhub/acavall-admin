@@ -5,16 +5,19 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Repositories\SessionRepository;
+use App\Services\RecurringSessionService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 class SessionController
 {
     private SessionRepository $sessionRepository;
+    private RecurringSessionService $recurringService;
 
     public function __construct()
     {
         $this->sessionRepository = new SessionRepository();
+        $this->recurringService = new RecurringSessionService();
     }
 
     /**
@@ -37,6 +40,9 @@ class SessionController
                 $filters = [];
                 if (!empty($params['entity_id'])) {
                     $filters['entity_id'] = (int)$params['entity_id'];
+                }
+                if (!empty($params['project_id'])) {
+                    $filters['project_id'] = (int)$params['project_id'];
                 }
                 if (!empty($params['program_id'])) {
                     $filters['program_id'] = (int)$params['program_id'];
@@ -133,10 +139,11 @@ class SessionController
                 ], 400);
             }
 
-            // Prepare data
+            // Prepare base data
             $data = [
                 'date' => $body['date'],
                 'entity_id' => (int)$body['entity_id'],
+                'project_id' => !empty($body['project_id']) ? (int)$body['project_id'] : null,
                 'start_time' => $body['start_time'] ?? '00:00:00',
                 'end_time' => $body['end_time'] ?? '00:00:00',
                 'hours' => !empty($body['hours']) ? (float)$body['hours'] : 0,
@@ -146,26 +153,58 @@ class SessionController
                 'created_by' => $request->getAttribute('user_id')
             ];
 
-            $id = $this->sessionRepository->create($data);
+            $therapistIds = !empty($body['therapist_ids']) && is_array($body['therapist_ids'])
+                ? $body['therapist_ids']
+                : [];
 
-            if (!$id) {
+            // Check if this is a recurring session
+            $isRecurring = !empty($body['recurrence_rule']);
+
+            if ($isRecurring) {
+                // Create multiple recurring sessions
+                $recurrenceRule = $body['recurrence_rule'];
+                $sessions = $this->recurringService->createRecurringSessions($data, $recurrenceRule);
+
+                $createdSessions = [];
+                foreach ($sessions as $sessionData) {
+                    $id = $this->sessionRepository->create($sessionData);
+                    if ($id) {
+                        // Attach therapists to each occurrence
+                        if (!empty($therapistIds)) {
+                            $this->sessionRepository->attachTherapists($id, $therapistIds);
+                        }
+                        $createdSessions[] = $this->sessionRepository->findWithRelations($id);
+                    }
+                }
+
                 return $this->jsonResponse($response, [
-                    'success' => false,
-                    'error' => 'Failed to create session'
-                ], 500);
+                    'success' => true,
+                    'data' => $createdSessions,
+                    'message' => count($createdSessions) . ' recurring sessions created'
+                ], 201);
+            } else {
+                // Create single session
+                $id = $this->sessionRepository->create($data);
+
+                if (!$id) {
+                    return $this->jsonResponse($response, [
+                        'success' => false,
+                        'error' => 'Failed to create session'
+                    ], 500);
+                }
+
+                // Attach therapists if provided
+                if (!empty($therapistIds)) {
+                    $this->sessionRepository->attachTherapists($id, $therapistIds);
+                }
+
+                $session = $this->sessionRepository->findWithRelations($id);
+
+                return $this->jsonResponse($response, [
+                    'success' => true,
+                    'data' => $session
+                ], 201);
             }
-
-            // Attach therapists if provided
-            if (!empty($body['therapist_ids']) && is_array($body['therapist_ids'])) {
-                $this->sessionRepository->attachTherapists($id, $body['therapist_ids']);
-            }
-
-            $session = $this->sessionRepository->findWithRelations($id);
-
-            return $this->jsonResponse($response, [
-                'success' => true,
-                'data' => $session
-            ], 201);
         } catch (\Exception $e) {
             error_log("Error in SessionController::create - " . $e->getMessage());
             return $this->jsonResponse($response, [

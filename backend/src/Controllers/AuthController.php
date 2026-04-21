@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Repositories\UserRepository;
 use App\Services\JWTService;
 use App\Services\EmailService;
+use App\Infrastructure\Database\Connection;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use PDO;
@@ -23,7 +24,7 @@ class AuthController
         $this->userRepository = new UserRepository();
         $this->jwtService = new JWTService();
         $this->emailService = new EmailService();
-        $this->db = $this->userRepository->getConnection();
+        $this->db = Connection::getInstance();
     }
 
     /**
@@ -144,6 +145,11 @@ class AuthController
 
         // Sanitize user data (remove password)
         $userData = $this->userRepository->sanitizeUser($userData);
+
+        // If user is being impersonated, add impersonator data from JWT
+        if (isset($user->impersonator)) {
+            $userData['impersonator'] = (array)$user->impersonator;
+        }
 
         return $this->jsonResponse($response, [
             'success' => true,
@@ -333,6 +339,207 @@ class AuthController
             return $this->jsonResponse($response, [
                 'success' => false,
                 'error' => 'Failed to reset password'
+            ], 500);
+        }
+    }
+
+    /**
+     * Impersonate user endpoint (admin only)
+     * POST /api/auth/impersonate/{userId}
+     *
+     * @param Request $request
+     * @param Response $response
+     * @param array $args
+     * @return Response
+     */
+    public function impersonate(Request $request, Response $response, array $args): Response
+    {
+        try {
+            // Get current user (admin)
+            $currentUser = $request->getAttribute('user');
+
+            if (!$currentUser || $currentUser->role !== 'admin') {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Only administrators can impersonate users'
+                ], 403);
+            }
+
+            // Get user to impersonate
+            $userId = (int)$args['userId'];
+            $targetUser = $this->userRepository->findById($userId);
+
+            if (!$targetUser) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'User not found'
+                ], 404);
+            }
+
+            // Cannot impersonate yourself
+            if ($userId === $currentUser->id) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Cannot impersonate yourself'
+                ], 400);
+            }
+
+            // Get admin user data from database
+            $adminUser = $this->userRepository->findById((int)$currentUser->id);
+
+            // Generate impersonation token
+            $token = $this->jwtService->generateToken($targetUser, $adminUser);
+
+            // Sanitize user data
+            $userData = $this->userRepository->sanitizeUser($targetUser);
+
+            // Set httpOnly cookie
+            $expiresAt = time() + (int)($_ENV['JWT_EXPIRATION'] ?? 3600);
+            $cookieValue = "auth_token={$token}; HttpOnly; Path=/; Max-Age=" . ($expiresAt - time()) . "; SameSite=Lax";
+
+            // Add Secure flag in production
+            if (($_ENV['APP_ENV'] ?? 'development') === 'production') {
+                $cookieValue .= "; Secure";
+            }
+
+            return $this->jsonResponse($response, [
+                'success' => true,
+                'data' => [
+                    'user' => $userData,
+                    'token' => $token,
+                    'impersonating' => true
+                ]
+            ], 200)
+                ->withHeader('Set-Cookie', $cookieValue);
+        } catch (\Exception $e) {
+            error_log('Error in impersonate: ' . $e->getMessage());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Failed to impersonate user'
+            ], 500);
+        }
+    }
+
+    /**
+     * Stop impersonating endpoint
+     * POST /api/auth/stop-impersonating
+     *
+     * @param Request $request
+     * @param Response $response
+     * @return Response
+     */
+    public function stopImpersonating(Request $request, Response $response): Response
+    {
+        try {
+            $user = $request->getAttribute('user');
+
+            if (!$user) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'User not authenticated'
+                ], 401);
+            }
+
+            // Check if user is impersonating
+            if (!isset($user->impersonator)) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Not currently impersonating'
+                ], 400);
+            }
+
+            // Get original admin user
+            $adminUser = $this->userRepository->findById((int)$user->impersonator->id);
+
+            if (!$adminUser) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Original user not found'
+                ], 404);
+            }
+
+            // Generate normal token for admin
+            $token = $this->jwtService->generateToken($adminUser);
+
+            // Sanitize user data
+            $userData = $this->userRepository->sanitizeUser($adminUser);
+
+            // Set httpOnly cookie
+            $expiresAt = time() + (int)($_ENV['JWT_EXPIRATION'] ?? 3600);
+            $cookieValue = "auth_token={$token}; HttpOnly; Path=/; Max-Age=" . ($expiresAt - time()) . "; SameSite=Lax";
+
+            // Add Secure flag in production
+            if (($_ENV['APP_ENV'] ?? 'development') === 'production') {
+                $cookieValue .= "; Secure";
+            }
+
+            return $this->jsonResponse($response, [
+                'success' => true,
+                'data' => [
+                    'user' => $userData,
+                    'token' => $token
+                ]
+            ], 200)
+                ->withHeader('Set-Cookie', $cookieValue);
+        } catch (\Exception $e) {
+            error_log('Error in stopImpersonating: ' . $e->getMessage());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Failed to stop impersonating'
+            ], 500);
+        }
+    }
+
+    /**
+     * Test email configuration
+     * POST /api/auth/test-email
+     *
+     * @param Request $request
+     * @param Response $response
+     * @return Response
+     */
+    public function testEmail(Request $request, Response $response): Response
+    {
+        try {
+            // Get current user (admin only)
+            $currentUser = $request->getAttribute('user');
+
+            if (!$currentUser || $currentUser->role !== 'admin') {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Only administrators can test email'
+                ], 403);
+            }
+
+            $body = $request->getParsedBody();
+            $toEmail = $body['email'] ?? null;
+
+            if (!$toEmail) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Email address is required'
+                ], 400);
+            }
+
+            // Send test email
+            $result = $this->emailService->sendTestEmail($toEmail);
+
+            if ($result) {
+                return $this->jsonResponse($response, [
+                    'success' => true,
+                    'message' => 'Test email sent successfully'
+                ], 200);
+            } else {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Failed to send test email'
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            error_log('Error in testEmail: ' . $e->getMessage());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Failed to send test email: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -364,22 +364,47 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="create_user_account"
-              checked={createUserAccount}
-              onCheckedChange={(checked) => setValue('create_user_account', checked as boolean)}
-              disabled={isSubmitting}
-            />
-            <label
-              htmlFor="create_user_account"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-            >
-              Crear cuenta de acceso al sistema
-            </label>
-          </div>
+          {therapist?.user_id ? (
+            /* User account already exists */
+            <div className="space-y-4 p-4 border rounded-lg bg-blue-50 dark:bg-blue-950">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-green-500" />
+                <p className="font-medium text-sm">
+                  Cuenta de acceso activa
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Este personal ya tiene una cuenta de acceso al sistema con el email: <strong>{therapist.email}</strong>
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/users?search=${therapist.email}`)}
+                className="w-full sm:w-auto"
+              >
+                Ver cuenta de usuario
+              </Button>
+            </div>
+          ) : (
+            /* No user account yet - show create option */
+            <>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="create_user_account"
+                  checked={createUserAccount}
+                  onCheckedChange={(checked) => setValue('create_user_account', checked as boolean)}
+                  disabled={isSubmitting}
+                />
+                <label
+                  htmlFor="create_user_account"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Crear cuenta de acceso al sistema
+                </label>
+              </div>
 
-          {createUserAccount && (
+              {createUserAccount && (
             <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
               <div className="space-y-2">
                 <Label htmlFor="user_email">Email de acceso</Label>
@@ -421,6 +446,8 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
                 </ul>
               </div>
             </div>
+          )}
+            </>
           )}
         </CardContent>
       </Card>

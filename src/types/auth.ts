@@ -8,6 +8,12 @@ export interface User {
   role: UserRole;
   is_active: boolean;
   created_at?: string;
+  impersonator?: {
+    id: number;
+    email: string;
+    name: string;
+    role: UserRole;
+  };
 }
 
 export interface LoginCredentials {
@@ -25,6 +31,9 @@ export interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isImpersonating: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  impersonate: (userId: number) => Promise<void>;
+  stopImpersonating: () => Promise<void>;
 }

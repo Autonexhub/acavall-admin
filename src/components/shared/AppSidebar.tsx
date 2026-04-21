@@ -1,4 +1,4 @@
-import { Calendar, Users, Building2, Clock, BarChart3, Shield, Settings, Home, LogOut, LayoutDashboard, Briefcase, User } from "lucide-react";
+import { Calendar, Users, Building2, Clock, BarChart3, Shield, Settings, Home, LogOut, LayoutDashboard, Briefcase, User, UserX, FileText } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import logoAcavall from "@/assets/logo-acavall.png";
 import {
@@ -30,12 +30,13 @@ const adminNavigationItems = [
 
 const therapistNavigationItems = [
   { title: "Mis Sesiones", url: "/my-sessions", icon: Calendar },
+  { title: "Mis Informes", url: "/my-reports", icon: FileText },
   { title: "Mi Perfil", url: "/my-profile", icon: User },
 ];
 
 export function AppSidebar() {
   const { pathname } = useLocation();
-  const { logout, user } = useAuth();
+  const { logout, user, isImpersonating, stopImpersonating } = useAuth();
 
   // Determine navigation items based on user role
   const navigationItems = useMemo(() => {
@@ -92,7 +93,23 @@ export function AppSidebar() {
             <div className="px-3 py-2">
               <p className="text-sm font-medium text-sidebar-foreground">{user.name}</p>
               <p className="text-xs text-muted-foreground">{user.email}</p>
+              {isImpersonating && user.impersonator && (
+                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 font-medium">
+                  👁️ Admin: {user.impersonator.name}
+                </p>
+              )}
             </div>
+          )}
+          {isImpersonating && (
+            <SidebarMenuButton asChild>
+              <button
+                onClick={() => stopImpersonating()}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-yellow-700 dark:text-yellow-400 transition-colors hover:bg-yellow-100 dark:hover:bg-yellow-900/20 font-medium border border-yellow-300 dark:border-yellow-700"
+              >
+                <UserX className="h-5 w-5" />
+                <span>Salir de Visualización</span>
+              </button>
+            </SidebarMenuButton>
           )}
           <SidebarMenuButton asChild>
             <button

@@ -28,6 +28,7 @@ export interface SessionFilters {
   start_date?: string;
   end_date?: string;
   entity_id?: number;
+  project_id?: number;
   therapist_id?: number;
   type?: 'regular' | 'festivo' | 'special';
 }

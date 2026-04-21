@@ -139,7 +139,7 @@ class TherapistController
             // Create user account if requested
             if (!empty($body['create_user_account']) && !empty($body['email']) && !empty($body['user_password'])) {
                 try {
-                    $userRepository = new \App\Repositories\UserRepository($this->therapistRepository->getConnection());
+                    $userRepository = new \App\Repositories\UserRepository();
 
                     // Check if user already exists with this email
                     $existingUser = $userRepository->findByEmail($body['email']);
@@ -149,7 +149,7 @@ class TherapistController
                         $userId = $userRepository->create([
                             'name' => $body['name'],
                             'email' => $body['email'],
-                            'password' => password_hash($plainPassword, PASSWORD_BCRYPT),
+                            'password_hash' => password_hash($plainPassword, PASSWORD_BCRYPT),
                             'role' => 'therapist',
                             'is_active' => 1
                         ]);
@@ -160,15 +160,18 @@ class TherapistController
 
                             // Send welcome email with credentials
                             try {
-                                $this->emailService->sendWelcomeEmail(
+                                $emailResult = $this->emailService->sendWelcomeEmail(
                                     $body['email'],
                                     $body['name'],
                                     $plainPassword
                                 );
+                                error_log("Welcome email sent to {$body['email']}: " . ($emailResult ? 'SUCCESS' : 'FAILED'));
                             } catch (\Exception $e) {
                                 error_log("Error sending welcome email: " . $e->getMessage());
                             }
                         }
+                    } else {
+                        error_log("User account already exists for email: {$body['email']}");
                     }
                 } catch (\Exception $e) {
                     error_log("Error creating user account for therapist: " . $e->getMessage());
@@ -204,6 +207,18 @@ class TherapistController
         try {
             $id = (int)$args['id'];
             $body = $request->getParsedBody();
+
+            // Debug logging to file
+            $debugLog = "/tmp/therapist_update_" . date('Y-m-d') . ".log";
+            $debugData = [
+                'timestamp' => date('Y-m-d H:i:s'),
+                'therapist_id' => $id,
+                'create_user_account' => $body['create_user_account'] ?? 'NOT SET',
+                'user_password' => isset($body['user_password']) ? 'SET (length: ' . strlen($body['user_password']) . ')' : 'NOT SET',
+                'email' => $body['email'] ?? 'NOT SET',
+                'all_fields' => array_keys($body)
+            ];
+            file_put_contents($debugLog, json_encode($debugData, JSON_PRETTY_PRINT) . "\n\n", FILE_APPEND);
 
             // Check if therapist exists
             $therapist = $this->therapistRepository->findById($id);
@@ -262,6 +277,55 @@ class TherapistController
                 }
                 if (!empty($toAttach)) {
                     $this->therapistRepository->attachEntities($id, array_values($toAttach));
+                }
+            }
+
+            // Create user account if requested (and not already linked)
+            if (!empty($body['create_user_account']) && !empty($body['email']) && !empty($body['user_password'])) {
+                try {
+                    // Check if therapist already has a user account
+                    $currentTherapist = $this->therapistRepository->findById($id);
+
+                    if (empty($currentTherapist['user_id'])) {
+                        $userRepository = new \App\Repositories\UserRepository();
+
+                        // Check if user already exists with this email
+                        $existingUser = $userRepository->findByEmail($body['email']);
+
+                        if (!$existingUser) {
+                            $plainPassword = $body['user_password'];
+                            $userId = $userRepository->create([
+                                'name' => $data['name'] ?? $currentTherapist['name'],
+                                'email' => $body['email'],
+                                'password_hash' => password_hash($plainPassword, PASSWORD_BCRYPT),
+                                'role' => 'therapist',
+                                'is_active' => 1
+                            ]);
+
+                            // Link user to therapist
+                            if ($userId) {
+                                $this->therapistRepository->update($id, ['user_id' => $userId]);
+
+                                // Send welcome email with credentials
+                                try {
+                                    $emailResult = $this->emailService->sendWelcomeEmail(
+                                        $body['email'],
+                                        $data['name'] ?? $currentTherapist['name'],
+                                        $plainPassword
+                                    );
+                                    error_log("Welcome email sent to {$body['email']}: " . ($emailResult ? 'SUCCESS' : 'FAILED'));
+                                } catch (\Exception $e) {
+                                    error_log("Error sending welcome email: " . $e->getMessage());
+                                }
+                            }
+                        } else {
+                            error_log("User account already exists for email: {$body['email']}");
+                        }
+                    } else {
+                        error_log("Therapist already has a user account linked (user_id: {$currentTherapist['user_id']})");
+                    }
+                } catch (\Exception $e) {
+                    error_log("Error creating user account for therapist: " . $e->getMessage());
                 }
             }
 

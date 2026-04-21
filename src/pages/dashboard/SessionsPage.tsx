@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSessions } from '@/lib/api/queries/useSessions';
 import { useEntities } from '@/lib/api/queries/useEntities';
+import { useProjects } from '@/lib/api/queries/useProjects';
 import { useTherapists } from '@/lib/api/queries/useTherapists';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -36,6 +37,7 @@ export default function SessionsPage() {
       start_date: searchParams.get('start_date') || format(startOfMonth(initialDate), 'yyyy-MM-dd'),
       end_date: searchParams.get('end_date') || format(endOfMonth(initialDate), 'yyyy-MM-dd'),
       entity_id: searchParams.get('entity_id') ? parseInt(searchParams.get('entity_id')!) : undefined,
+      project_id: searchParams.get('project_id') ? parseInt(searchParams.get('project_id')!) : undefined,
       therapist_id: searchParams.get('therapist_id') ? parseInt(searchParams.get('therapist_id')!) : undefined,
     };
   };
@@ -48,9 +50,11 @@ export default function SessionsPage() {
 
   const { data: sessions, isLoading: sessionsLoading } = useSessions(filters);
   const { data: entitiesData, isLoading: entitiesLoading } = useEntities({ page: 1, perPage: 100 });
+  const { data: projectsData, isLoading: projectsLoading } = useProjects({ page: 1, perPage: 100 });
   const { data: therapists, isLoading: therapistsLoading } = useTherapists();
 
   const entities = entitiesData?.data || [];
+  const projects = projectsData || [];
 
   // Sync filters to URL
   useEffect(() => {
@@ -66,6 +70,7 @@ export default function SessionsPage() {
     if (filters.start_date) params.set('start_date', filters.start_date);
     if (filters.end_date) params.set('end_date', filters.end_date);
     if (filters.entity_id) params.set('entity_id', filters.entity_id.toString());
+    if (filters.project_id) params.set('project_id', filters.project_id.toString());
     if (filters.therapist_id) params.set('therapist_id', filters.therapist_id.toString());
 
     setSearchParams(params, { replace: true });
@@ -98,7 +103,7 @@ export default function SessionsPage() {
     navigate(`/sessions/new?date=${format(date, 'yyyy-MM-dd')}`);
   };
 
-  const isLoading = sessionsLoading || entitiesLoading || therapistsLoading;
+  const isLoading = sessionsLoading || entitiesLoading || projectsLoading || therapistsLoading;
 
   return (
     <div className="space-y-6">
@@ -123,8 +128,8 @@ export default function SessionsPage() {
           <Filter className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold text-foreground">Filtros</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="md:col-span-2 lg:col-span-1">
             <label className="text-sm font-medium text-foreground mb-2 block">
               Rango de fechas
             </label>
@@ -157,6 +162,29 @@ export default function SessionsPage() {
                 {entities?.map((entity) => (
                   <SelectItem key={entity.id} value={entity.id.toString()}>
                     {entity.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground mb-2 block">
+              Proyecto
+            </label>
+            <Select
+              value={filters.project_id?.toString() || 'all'}
+              onValueChange={(value) =>
+                handleFilterChange('project_id', value === 'all' ? undefined : parseInt(value))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los proyectos</SelectItem>
+                {projects?.filter(p => p.is_active).map((project) => (
+                  <SelectItem key={project.id} value={project.id.toString()}>
+                    {project.name}
                   </SelectItem>
                 ))}
               </SelectContent>

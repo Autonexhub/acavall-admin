@@ -18,6 +18,9 @@ use Slim\Routing\RouteCollectorProxy;
  * Protected routes (require authentication):
  * - POST /api/auth/logout
  * - GET /api/auth/me
+ * - POST /api/auth/impersonate/{userId} (admin only)
+ * - POST /api/auth/stop-impersonating
+ * - POST /api/auth/test-email (admin only)
  */
 
 $app->group('/api/auth', function (RouteCollectorProxy $group) {
@@ -34,5 +37,16 @@ $app->group('/api/auth', function (RouteCollectorProxy $group) {
         ->add(new AuthMiddleware());
 
     $group->get('/me', [$authController, 'me'])
+        ->add(new AuthMiddleware());
+
+    // Admin impersonation routes
+    $group->post('/impersonate/{userId}', [$authController, 'impersonate'])
+        ->add(new AuthMiddleware());
+
+    $group->post('/stop-impersonating', [$authController, 'stopImpersonating'])
+        ->add(new AuthMiddleware());
+
+    // Email testing (admin only)
+    $group->post('/test-email', [$authController, 'testEmail'])
         ->add(new AuthMiddleware());
 });

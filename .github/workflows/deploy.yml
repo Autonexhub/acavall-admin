@@ -1,0 +1,351 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      skip_backup:
+        description: 'Skip backup before deployment'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  SSH_USER: u353044586
+  SSH_HOST: 178.16.128.17
+  SSH_PORT: 65002
+  DEPLOY_PATH: /home/u353044586/domains/admin.fundacionacavall.com/public_html
+  DEPLOY_DOMAIN: admin.fundacionacavall.com
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_mysql
+          tools: composer:v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: composer-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_API_URL: /api
+
+      - name: Create backend .env file
+        working-directory: backend
+        run: |
+          cat > .env << EOF
+          # Database Configuration
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=3306
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+
+          # JWT Configuration
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION=3600
+          JWT_ISSUER=acavall-harmony
+
+          # CORS Configuration
+          CORS_ORIGIN=https://${{ env.DEPLOY_DOMAIN }}
+
+          # Application
+          APP_ENV=production
+          APP_DEBUG=false
+          APP_URL=https://${{ env.DEPLOY_DOMAIN }}
+
+          # Frontend URL (for email links)
+          FRONTEND_URL=https://${{ env.DEPLOY_DOMAIN }}
+
+          # Email Configuration
+          MAIL_FROM_ADDRESS=noreply@fundacionacavall.com
+          MAIL_FROM_NAME="Fundación Acavall"
+
+          # SMTP Configuration
+          SMTP_HOST=${{ secrets.SMTP_HOST }}
+          SMTP_PORT=${{ secrets.SMTP_PORT }}
+          SMTP_SECURE=${{ secrets.SMTP_SECURE }}
+          SMTP_USER=${{ secrets.SMTP_USER }}
+          SMTP_PASS=${{ secrets.SMTP_PASS }}
+          SMTP_FROM_NAME="Fundación Acavall"
+          SMTP_FROM_EMAIL=noreply@fundacionacavall.com
+          EOF
+
+      - name: Prepare deployment package
+        run: |
+          rm -rf deploy/public_html
+          mkdir -p deploy/public_html/public
+
+          # Copy backend files
+          rsync -a --exclude='node_modules' \
+                   --exclude='.git' \
+                   --exclude='logs' \
+                   --exclude='.env.example' \
+                   backend/ deploy/public_html/
+
+          # Copy Vite build to public directory
+          if [ -d "dist" ]; then
+            rsync -a dist/ deploy/public_html/public/
+          fi
+
+          # Ensure backend index.php is in the public directory
+          if [ -f "backend/public/index.php" ]; then
+            cp backend/public/index.php deploy/public_html/public/index.php
+          fi
+
+          # Copy backend .htaccess to public
+          if [ -f "backend/public/.htaccess" ]; then
+            cp backend/public/.htaccess deploy/public_html/public/.htaccess
+          fi
+
+      - name: Generate root .htaccess
+        run: |
+          cat > deploy/public_html/.htaccess << 'EOF'
+          DirectoryIndex public/index.html
+
+          <IfModule mod_rewrite.c>
+          RewriteEngine On
+          RewriteBase /
+
+          # API routes → public/index.php (backend)
+          RewriteCond %{REQUEST_URI} ^/api/
+          RewriteRule ^api/(.*)$ /public/index.php [QSA,L]
+
+          # Static files (assets, images, fonts, etc.) → serve directly from public/
+          RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|mp3|wav|mp4|json|map|webp)$ [NC]
+          RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+          RewriteRule ^(.*)$ /public/$1 [L]
+
+          # Vite assets folder
+          RewriteCond %{REQUEST_URI} ^/assets/
+          RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+          RewriteRule ^(.*)$ /public/$1 [L]
+
+          # Upload files → serve from uploads/
+          RewriteCond %{REQUEST_URI} ^/uploads/
+          RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+          RewriteRule ^(.*)$ /public/$1 [L]
+
+          # SPA fallback: Everything else → index.html for client-side routing
+          RewriteCond %{REQUEST_FILENAME} !-f
+          RewriteCond %{REQUEST_FILENAME} !-d
+          RewriteCond %{REQUEST_URI} !^/api/
+          RewriteRule ^(.*)$ /public/index.html [L,QSA]
+          </IfModule>
+
+          # Security Headers
+          <IfModule mod_headers.c>
+              Header set X-Content-Type-Options "nosniff"
+              Header set X-Frame-Options "SAMEORIGIN"
+              Header set X-XSS-Protection "1; mode=block"
+              Header set Referrer-Policy "strict-origin-when-cross-origin"
+          </IfModule>
+
+          # PHP Settings
+          <IfModule mod_php.c>
+              php_value upload_max_filesize 10M
+              php_value post_max_size 10M
+              php_value max_execution_time 300
+          </IfModule>
+
+          # Enable GZIP compression
+          <IfModule mod_deflate.c>
+              AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+          </IfModule>
+
+          # Browser caching for static assets
+          <IfModule mod_expires.c>
+              ExpiresActive On
+              ExpiresByType image/jpg "access plus 1 year"
+              ExpiresByType image/jpeg "access plus 1 year"
+              ExpiresByType image/gif "access plus 1 year"
+              ExpiresByType image/png "access plus 1 year"
+              ExpiresByType image/webp "access plus 1 year"
+              ExpiresByType image/svg+xml "access plus 1 year"
+              ExpiresByType text/css "access plus 1 month"
+              ExpiresByType application/javascript "access plus 1 month"
+              ExpiresByType application/font-woff "access plus 1 year"
+              ExpiresByType application/font-woff2 "access plus 1 year"
+          </IfModule>
+          EOF
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          # Add host key with retry
+          for i in 1 2 3; do
+            ssh-keyscan -p ${{ env.SSH_PORT }} -H ${{ env.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null && break
+            echo "Retry $i: ssh-keyscan failed, retrying..."
+            sleep 2
+          done
+
+          # Fallback: disable strict host key checking if keyscan fails
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "Warning: ssh-keyscan failed, disabling strict host key checking"
+            echo "Host ${{ env.SSH_HOST }}" >> ~/.ssh/config
+            echo "  StrictHostKeyChecking no" >> ~/.ssh/config
+            echo "  UserKnownHostsFile /dev/null" >> ~/.ssh/config
+          fi
+
+      - name: Cleanup old backups (keep 5)
+        run: |
+          ssh -p ${{ env.SSH_PORT }} ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            mkdir -p \$HOME/backups
+            cd \$HOME/backups
+            ls -t backup-*.tar.gz 2>/dev/null | tail -n +6 | xargs -r rm -- 2>/dev/null || true
+          "
+
+      - name: Create remote backup
+        if: ${{ github.event.inputs.skip_backup != 'true' }}
+        run: |
+          BACKUP_NAME="backup-$(date +%Y%m%d-%H%M%S)"
+          ssh -p ${{ env.SSH_PORT }} ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            if [ -d '${{ env.DEPLOY_PATH }}' ]; then
+              echo 'Creating backup: ${BACKUP_NAME}.tar.gz'
+              cd '${{ env.DEPLOY_PATH }}/..'
+              tar -czf \"\$HOME/backups/${BACKUP_NAME}.tar.gz\" public_html \
+                --exclude='public_html/logs' \
+                --exclude='public_html/public/uploads' 2>/dev/null || true
+              echo 'Backup size:' \$(du -h \$HOME/backups/${BACKUP_NAME}.tar.gz | cut -f1)
+            fi
+          "
+
+      - name: Deploy via rsync
+        run: |
+          rsync -avz --delete \
+                -e "ssh -p ${{ env.SSH_PORT }}" \
+                --exclude='logs' \
+                --exclude='public/uploads' \
+                deploy/public_html/ \
+                ${{ env.SSH_USER }}@${{ env.SSH_HOST }}:${{ env.DEPLOY_PATH }}/
+
+      - name: Set permissions
+        run: |
+          ssh -p ${{ env.SSH_PORT }} ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'ENDSSH'
+            cd ${{ env.DEPLOY_PATH }}
+            find . -type d -exec chmod 755 {} \;
+            find . -type f -exec chmod 644 {} \;
+            chmod 640 .env
+            mkdir -p logs public/uploads
+            chmod 755 logs public/uploads
+          ENDSSH
+
+      - name: Regenerate Composer autoloader
+        run: |
+          ssh -p ${{ env.SSH_PORT }} ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            cd ${{ env.DEPLOY_PATH }}
+            if [ -f composer.json ]; then
+              composer dump-autoload --optimize --no-dev 2>/dev/null || true
+            fi
+          "
+
+      - name: Run database migrations
+        run: |
+          ssh -p ${{ env.SSH_PORT }} ${{ env.SSH_USER }}@${{ env.SSH_HOST }} "
+            cd ${{ env.DEPLOY_PATH }}
+
+            # Create migrations tracking table if not exists
+            mysql -h ${{ secrets.DB_HOST }} -u ${{ secrets.DB_USER }} -p'${{ secrets.DB_PASSWORD }}' ${{ secrets.DB_NAME }} -e '
+              CREATE TABLE IF NOT EXISTS migrations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                migration VARCHAR(255) NOT NULL UNIQUE,
+                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              );
+            ' 2>/dev/null || true
+
+            # Run pending migrations
+            if [ -d 'migrations' ]; then
+              for migration in migrations/*.sql; do
+                if [ -f \"\$migration\" ]; then
+                  migration_name=\$(basename \"\$migration\")
+
+                  # Check if already executed
+                  executed=\$(mysql -h ${{ secrets.DB_HOST }} -u ${{ secrets.DB_USER }} -p'${{ secrets.DB_PASSWORD }}' ${{ secrets.DB_NAME }} -N -e \"SELECT COUNT(*) FROM migrations WHERE migration='\$migration_name';\" 2>/dev/null || echo '0')
+
+                  if [ \"\$executed\" = '0' ]; then
+                    echo \"Running migration: \$migration_name\"
+                    mysql -h ${{ secrets.DB_HOST }} -u ${{ secrets.DB_USER }} -p'${{ secrets.DB_PASSWORD }}' ${{ secrets.DB_NAME }} < \"\$migration\" 2>/dev/null && \
+                    mysql -h ${{ secrets.DB_HOST }} -u ${{ secrets.DB_USER }} -p'${{ secrets.DB_PASSWORD }}' ${{ secrets.DB_NAME }} -e \"INSERT INTO migrations (migration) VALUES ('\$migration_name');\" 2>/dev/null || \
+                    echo \"Warning: Migration \$migration_name may have failed\"
+                  fi
+                fi
+              done
+            fi
+          "
+
+      - name: Health check
+        run: |
+          echo "Waiting for deployment to settle..."
+          sleep 5
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.DEPLOY_DOMAIN }}/api/health)
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "Health check passed! (HTTP $HTTP_STATUS)"
+          else
+            echo "Warning: Health check returned HTTP $HTTP_STATUS"
+            echo "The deployment may still be successful - please verify manually"
+          fi
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "========================================"
+          echo "Deployment Summary"
+          echo "========================================"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed to: https://${{ env.DEPLOY_DOMAIN }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "========================================"
+
+      - name: Notify Discord (Success)
+        if: success() && vars.DISCORD_WEBHOOK_URL != ''
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d "{\"embeds\":[{\"title\":\"Acavall Admin Deployed\",\"description\":\"Deployment successful!\",\"color\":5763719,\"fields\":[{\"name\":\"Branch\",\"value\":\"\`${{ github.ref_name }}\`\",\"inline\":true},{\"name\":\"Commit\",\"value\":\"\`${{ github.sha }}\`\",\"inline\":true},{\"name\":\"URL\",\"value\":\"https://${{ env.DEPLOY_DOMAIN }}\",\"inline\":false}],\"footer\":{\"text\":\"Triggered by ${{ github.actor }}\"}}]}" \
+               ${{ vars.DISCORD_WEBHOOK_URL }} || true
+
+      - name: Notify Discord (Failure)
+        if: failure() && vars.DISCORD_WEBHOOK_URL != ''
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d "{\"embeds\":[{\"title\":\"Acavall Admin Deployment Failed\",\"description\":\"Deployment failed! Check GitHub Actions for details.\",\"color\":15548997,\"fields\":[{\"name\":\"Branch\",\"value\":\"\`${{ github.ref_name }}\`\",\"inline\":true},{\"name\":\"Commit\",\"value\":\"\`${{ github.sha }}\`\",\"inline\":true},{\"name\":\"Workflow\",\"value\":\"[View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\",\"inline\":false}],\"footer\":{\"text\":\"Triggered by ${{ github.actor }}\"}}]}" \
+               ${{ vars.DISCORD_WEBHOOK_URL }} || true

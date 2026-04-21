@@ -1,17 +1,21 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useSessions } from '@/lib/api/queries/useSessions';
 import { useEntities } from '@/lib/api/queries/useEntities';
 import { useTherapists } from '@/lib/api/queries/useTherapists';
+import { useSendTestEmail } from '@/lib/api/queries/useAuth';
 import { StatCard } from '@/components/shared/StatCard';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Clock, Building2, Users, Download, Calendar, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Clock, Building2, Users, Download, Calendar, Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdministracionPage() {
+  const [testEmail, setTestEmail] = useState('');
   const { data: sessions, isLoading: sessionsLoading } = useSessions();
   const { data: entitiesData, isLoading: entitiesLoading } = useEntities();
   const { data: therapists, isLoading: therapistsLoading } = useTherapists();
+  const sendTestEmailMutation = useSendTestEmail();
 
   const entities = entitiesData?.data || [];
 
@@ -69,6 +73,21 @@ export default function AdministracionPage() {
     toast.info('Función de exportación en desarrollo');
   };
 
+  const handleSendTestEmail = async () => {
+    if (!testEmail) {
+      toast.error('Por favor ingresa un email');
+      return;
+    }
+
+    try {
+      await sendTestEmailMutation.mutateAsync(testEmail);
+      toast.success(`Email de prueba enviado a ${testEmail}`);
+      setTestEmail('');
+    } catch (error) {
+      toast.error('Error al enviar email de prueba');
+    }
+  };
+
   const isLoading = sessionsLoading || entitiesLoading || therapistsLoading;
 
   if (isLoading) {
@@ -91,6 +110,45 @@ export default function AdministracionPage() {
           Exportar Informe
         </Button>
       </div>
+
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Mail className="h-5 w-5" />
+          Probar Configuración de Email
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Envía un email de prueba para verificar que la configuración SMTP está funcionando correctamente.
+        </p>
+        <div className="flex gap-3">
+          <Input
+            type="email"
+            placeholder="email@ejemplo.com"
+            value={testEmail}
+            onChange={(e) => setTestEmail(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSendTestEmail();
+              }
+            }}
+          />
+          <Button
+            onClick={handleSendTestEmail}
+            disabled={sendTestEmailMutation.isPending || !testEmail}
+          >
+            {sendTestEmailMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <Mail className="h-4 w-4 mr-2" />
+                Enviar Prueba
+              </>
+            )}
+          </Button>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard

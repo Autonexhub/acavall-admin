@@ -92,6 +92,9 @@ class ProjectController
                 'end_date' => $body['end_date'] ?? null,
                 'num_sessions' => isset($body['num_sessions']) ? (int)$body['num_sessions'] : 0,
                 'beneficiaries' => isset($body['beneficiaries']) ? (int)$body['beneficiaries'] : 0,
+                'beneficiaries_female' => isset($body['beneficiaries_female']) ? (int)$body['beneficiaries_female'] : 0,
+                'beneficiaries_male' => isset($body['beneficiaries_male']) ? (int)$body['beneficiaries_male'] : 0,
+                'average_age' => isset($body['average_age']) && $body['average_age'] !== '' ? (float)$body['average_age'] : null,
                 'amount' => isset($body['amount']) ? (float)$body['amount'] : 0,
                 'type' => $body['type'] ?? 'terapia',
                 'funding_type' => $body['funding_type'] ?? 'private_subsidy',
@@ -154,6 +157,9 @@ class ProjectController
             if (isset($body['end_date'])) $data['end_date'] = $body['end_date'];
             if (isset($body['num_sessions'])) $data['num_sessions'] = (int)$body['num_sessions'];
             if (isset($body['beneficiaries'])) $data['beneficiaries'] = (int)$body['beneficiaries'];
+            if (isset($body['beneficiaries_female'])) $data['beneficiaries_female'] = (int)$body['beneficiaries_female'];
+            if (isset($body['beneficiaries_male'])) $data['beneficiaries_male'] = (int)$body['beneficiaries_male'];
+            if (array_key_exists('average_age', $body)) $data['average_age'] = $body['average_age'] !== '' && $body['average_age'] !== null ? (float)$body['average_age'] : null;
             if (isset($body['amount'])) $data['amount'] = (float)$body['amount'];
             if (isset($body['type'])) $data['type'] = $body['type'];
             if (isset($body['funding_type'])) $data['funding_type'] = $body['funding_type'];

@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { useUsers } from '@/lib/api/queries/useUsers';
-import { useCurrentUser } from '@/lib/api/queries/useAuth';
+import { useAuth } from '@/components/providers/auth-provider';
 import { canCreate } from '@/lib/auth/permissions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Users, Mail, Phone, Shield } from 'lucide-react';
+import { Plus, Users, Mail, Phone, Shield, Eye } from 'lucide-react';
+import { toast } from 'sonner';
 
 const ROLE_LABELS = {
   admin: 'Administrador',
@@ -23,7 +24,7 @@ const ROLE_COLORS = {
 export default function UsersPage() {
   const navigate = useNavigate();
   const { data: users, isLoading, error } = useUsers();
-  const { data: currentUser } = useCurrentUser();
+  const { user: currentUser, impersonate } = useAuth();
 
   const handleCreateUser = () => {
     navigate('/users/new');
@@ -31,6 +32,16 @@ export default function UsersPage() {
 
   const handleUserClick = (id: number) => {
     navigate(`/users/${id}`);
+  };
+
+  const handleImpersonate = async (userId: number, userName: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent card click navigation
+    try {
+      await impersonate(userId);
+      toast.success(`Ahora estás viendo como ${userName}`);
+    } catch (error) {
+      toast.error('Error al iniciar modo de visualización');
+    }
   };
 
   if (isLoading) {
@@ -130,6 +141,19 @@ export default function UsersPage() {
                     </Badge>
                   )}
                 </div>
+                {currentUser?.role === 'admin' && user.id !== currentUser.id && (
+                  <div className="mt-4 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={(e) => handleImpersonate(user.id, user.name, e)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Ver como este usuario
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

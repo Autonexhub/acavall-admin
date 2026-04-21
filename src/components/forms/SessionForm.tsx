@@ -25,7 +25,8 @@ import { CalendarIcon, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { Session } from '@/types/models';
+import type { Session, RecurrenceRule } from '@/types/models';
+import { RecurrenceSelector } from '@/components/sessions/RecurrenceSelector';
 
 interface SessionFormProps {
   session?: Session;
@@ -62,6 +63,7 @@ export function SessionForm({ session, onSubmit, isSubmitting }: SessionFormProp
       : {
           type: 'caballos',
           therapist_ids: [],
+          recurrence_rule: null,
         },
   });
 
@@ -71,6 +73,7 @@ export function SessionForm({ session, onSubmit, isSubmitting }: SessionFormProp
   const selectedEntityId = watch('entity_id');
   const selectedProjectId = watch('project_id');
   const selectedTherapistIds = watch('therapist_ids');
+  const recurrenceRule = watch('recurrence_rule');
 
   // Auto-calculate hours when start_time or end_time changes
   useEffect(() => {
@@ -375,11 +378,22 @@ export function SessionForm({ session, onSubmit, isSubmitting }: SessionFormProp
         )}
       </div>
 
+      {/* Recurrence Selector - Only show when creating new sessions */}
+      {!session && (
+        <div className="space-y-4">
+          <RecurrenceSelector
+            value={recurrenceRule || null}
+            onChange={(rule) => setValue('recurrence_rule', rule)}
+            disabled={isSubmitting}
+          />
+        </div>
+      )}
+
       {/* Submit Button */}
       <div className="flex justify-end gap-4">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {session ? 'Actualizar Sesión' : 'Crear Sesión'}
+          {session ? 'Actualizar Sesión' : recurrenceRule ? 'Crear Sesiones Recurrentes' : 'Crear Sesión'}
         </Button>
       </div>
     </form>

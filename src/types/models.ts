@@ -36,6 +36,15 @@ export interface Therapist {
   updated_at?: string;
 }
 
+export interface RecurrenceRule {
+  frequency: 'daily' | 'weekly' | 'monthly';
+  interval: number;
+  daysOfWeek?: number[]; // 0=Sunday, 1=Monday, etc.
+  endType: 'never' | 'date' | 'count';
+  endDate?: string;
+  endCount?: number;
+}
+
 export interface Session {
   id: number;
   entity_id: number;
@@ -52,6 +61,11 @@ export interface Session {
   project?: Project;
   project_name?: string;
   therapists?: Therapist[];
+  created_by?: number | null;
+  is_recurring?: boolean;
+  recurring_group_id?: string | null;
+  recurrence_rule?: RecurrenceRule | null;
+  recurrence_exception?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -117,6 +131,9 @@ export interface Project {
   end_date?: string;
   num_sessions: number;
   beneficiaries: number;
+  beneficiaries_female: number;
+  beneficiaries_male: number;
+  average_age?: number;
   amount: number;
   type: 'ocio' | 'educacion' | 'terapia' | 'voluntariado' | 'formacion' | 'otros';
   funding_type: 'public_subsidy' | 'private_subsidy' | 'financiacion_propia';

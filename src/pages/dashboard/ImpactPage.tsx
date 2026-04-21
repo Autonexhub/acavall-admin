@@ -66,9 +66,6 @@ export default function ImpactoPage() {
       totalSessions: sessions.length,
       activeEntities,
       avgParticipants,
-      avgHours: sessions.length > 0 ? Math.round((totalHours / sessions.length) * 10) / 10 : 0,
-      occupancyRate:
-        entities.length > 0 ? Math.round((activeEntities / entities.length) * 100) : 0,
       monthlyData,
       entityDistribution,
     };
@@ -110,7 +107,7 @@ export default function ImpactoPage() {
           title="Horas Impartidas"
           value={`${stats.totalHours}h`}
           icon={Clock}
-          trend={`${stats.avgHours}h promedio`}
+          trend="Total acumulado"
         />
         <StatCard
           title="Centros Activos"
@@ -190,26 +187,14 @@ export default function ImpactoPage() {
 
       <Card className="p-6">
         <h2 className="text-xl font-semibold text-foreground mb-4">Resumen de Impacto</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center p-6 bg-muted rounded-lg">
+        <div className="flex justify-center">
+          <div className="text-center p-6 bg-muted rounded-lg w-full max-w-md">
             <p className="text-4xl font-bold text-primary mb-2">
               {stats.avgParticipants}
             </p>
             <p className="text-sm text-muted-foreground">
               Promedio de participantes por sesión
             </p>
-          </div>
-          <div className="text-center p-6 bg-muted rounded-lg">
-            <p className="text-4xl font-bold text-primary mb-2">{stats.avgHours}h</p>
-            <p className="text-sm text-muted-foreground">
-              Duración promedio por sesión
-            </p>
-          </div>
-          <div className="text-center p-6 bg-muted rounded-lg">
-            <p className="text-4xl font-bold text-primary mb-2">
-              {stats.occupancyRate}%
-            </p>
-            <p className="text-sm text-muted-foreground">Tasa de ocupación de centros</p>
           </div>
         </div>
       </Card>

@@ -60,7 +60,7 @@ class SessionRepository extends BaseRepository
      *
      * @param string $startDate
      * @param string $endDate
-     * @param array $filters Optional filters (entity_id, therapist_id, program_id)
+     * @param array $filters Optional filters (entity_id, project_id, therapist_id, program_id)
      * @return array
      */
     public function findByDateRange(string $startDate, string $endDate, array $filters = []): array
@@ -83,6 +83,11 @@ class SessionRepository extends BaseRepository
             if (!empty($filters['entity_id'])) {
                 $sql .= " AND s.entity_id = :entity_id";
                 $params[':entity_id'] = $filters['entity_id'];
+            }
+
+            if (!empty($filters['project_id'])) {
+                $sql .= " AND s.project_id = :project_id";
+                $params[':project_id'] = $filters['project_id'];
             }
 
             if (!empty($filters['therapist_id'])) {

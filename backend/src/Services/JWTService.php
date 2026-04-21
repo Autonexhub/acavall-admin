@@ -25,9 +25,10 @@ class JWTService
      * Generate JWT token for a user
      *
      * @param array $user User data
+     * @param array|null $impersonator Optional impersonator data for admin impersonation
      * @return string JWT token
      */
-    public function generateToken(array $user): string
+    public function generateToken(array $user, ?array $impersonator = null): string
     {
         $issuedAt = time();
         $expiresAt = $issuedAt + $this->expiration;
@@ -44,6 +45,16 @@ class JWTService
                 'role' => $user['role'],
             ]
         ];
+
+        // Add impersonation data if provided
+        if ($impersonator !== null) {
+            $payload['data']['impersonator'] = [
+                'id' => $impersonator['id'],
+                'email' => $impersonator['email'],
+                'name' => $impersonator['name'],
+                'role' => $impersonator['role'],
+            ];
+        }
 
         return JWT::encode($payload, $this->secret, 'HS256');
     }

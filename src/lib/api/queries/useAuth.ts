@@ -39,3 +39,40 @@ export function useLogout() {
     },
   });
 }
+
+export function useImpersonate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: number) =>
+      apiClient.post<AuthResponse>(API_ENDPOINTS.auth.impersonate(userId)),
+    onSuccess: (data) => {
+      // Update user in cache
+      queryClient.setQueryData(['auth', 'user'], data.user);
+      // Invalidate all queries to refresh data with new user context
+      queryClient.invalidateQueries();
+    },
+  });
+}
+
+export function useStopImpersonating() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post<AuthResponse>(API_ENDPOINTS.auth.stopImpersonating),
+    onSuccess: (data) => {
+      // Update user in cache
+      queryClient.setQueryData(['auth', 'user'], data.user);
+      // Invalidate all queries to refresh data with admin context
+      queryClient.invalidateQueries();
+    },
+  });
+}
+
+export function useSendTestEmail() {
+  return useMutation({
+    mutationFn: (email: string) =>
+      apiClient.post(API_ENDPOINTS.auth.testEmail, { email }),
+  });
+}
