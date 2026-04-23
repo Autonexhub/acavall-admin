@@ -100,10 +100,39 @@ class UserController
             $body = $request->getParsedBody();
 
             // Validate required fields
-            if (empty($body['name']) || empty($body['email']) || empty($body['password'])) {
+            if (empty($body['name'])) {
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'Name, email, and password are required'
+                    'error' => 'El nombre es obligatorio'
+                ], 400);
+            }
+
+            if (empty($body['email'])) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'El email es obligatorio'
+                ], 400);
+            }
+
+            if (empty($body['password'])) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'La contraseña es obligatoria'
+                ], 400);
+            }
+
+            if (strlen($body['password']) < 6) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'La contraseña debe tener al menos 6 caracteres'
+                ], 400);
+            }
+
+            // Validate email format
+            if (!filter_var($body['email'], FILTER_VALIDATE_EMAIL)) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'El formato del email no es válido'
                 ], 400);
             }
 
@@ -112,7 +141,7 @@ class UserController
             if ($existingUser) {
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'Email already exists'
+                    'error' => 'Ya existe un usuario con este email'
                 ], 409);
             }
 
@@ -133,7 +162,7 @@ class UserController
             if (!$id) {
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'Failed to create user'
+                    'error' => 'Error al crear el usuario en la base de datos'
                 ], 500);
             }
 
@@ -148,7 +177,7 @@ class UserController
             error_log("Error in UserController::create - " . $e->getMessage());
             return $this->jsonResponse($response, [
                 'success' => false,
-                'error' => 'Failed to create user'
+                'error' => 'Error al crear usuario: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -173,7 +202,7 @@ class UserController
             if (!$user) {
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'User not found'
+                    'error' => 'Usuario no encontrado'
                 ], 404);
             }
 
@@ -181,12 +210,19 @@ class UserController
             $data = [];
             if (isset($body['name'])) $data['name'] = $body['name'];
             if (isset($body['email'])) {
+                // Validate email format
+                if (!filter_var($body['email'], FILTER_VALIDATE_EMAIL)) {
+                    return $this->jsonResponse($response, [
+                        'success' => false,
+                        'error' => 'El formato del email no es válido'
+                    ], 400);
+                }
                 // Check if email is taken by another user
                 $existingUser = $this->userRepository->findByEmail($body['email']);
                 if ($existingUser && $existingUser['id'] != $id) {
                     return $this->jsonResponse($response, [
                         'success' => false,
-                        'error' => 'Email already exists'
+                        'error' => 'Ya existe otro usuario con este email'
                     ], 409);
                 }
                 $data['email'] = $body['email'];
@@ -196,6 +232,12 @@ class UserController
 
             // Only update password if provided
             if (isset($body['password']) && !empty($body['password'])) {
+                if (strlen($body['password']) < 6) {
+                    return $this->jsonResponse($response, [
+                        'success' => false,
+                        'error' => 'La contraseña debe tener al menos 6 caracteres'
+                    ], 400);
+                }
                 $data['password_hash'] = password_hash($body['password'], PASSWORD_BCRYPT);
             }
 
@@ -204,7 +246,7 @@ class UserController
                 if (!$success) {
                     return $this->jsonResponse($response, [
                         'success' => false,
-                        'error' => 'Failed to update user'
+                        'error' => 'Error al actualizar el usuario'
                     ], 500);
                 }
             }
@@ -220,7 +262,7 @@ class UserController
             error_log("Error in UserController::update - " . $e->getMessage());
             return $this->jsonResponse($response, [
                 'success' => false,
-                'error' => 'Failed to update user'
+                'error' => 'Error al actualizar usuario: ' . $e->getMessage()
             ], 500);
         }
     }
