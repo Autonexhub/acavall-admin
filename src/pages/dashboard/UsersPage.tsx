@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { useUsers, useResendUserInvite } from '@/lib/api/queries/useUsers';
+import { useUsers, useResendUserInvite, useArchiveUser, useRestoreUser } from '@/lib/api/queries/useUsers';
 import { useAuth } from '@/components/providers/auth-provider';
 import { canCreate } from '@/lib/auth/permissions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Users, Mail, Phone, Shield, Eye, Send } from 'lucide-react';
+import { Plus, Users, Mail, Phone, Shield, Eye, Send, Archive, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ROLE_LABELS = {
@@ -26,6 +26,8 @@ export default function UsersPage() {
   const { data: users, isLoading, error } = useUsers();
   const { user: currentUser, impersonate } = useAuth();
   const resendInviteMutation = useResendUserInvite();
+  const archiveMutation = useArchiveUser();
+  const restoreMutation = useRestoreUser();
 
   const handleCreateUser = () => {
     navigate('/users/new');
@@ -52,6 +54,26 @@ export default function UsersPage() {
       toast.success(`Invitación enviada a ${userEmail}`);
     } catch (error: any) {
       toast.error(error.message || 'Error al enviar invitación');
+    }
+  };
+
+  const handleArchive = async (userId: number, userName: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    try {
+      await archiveMutation.mutateAsync(userId);
+      toast.success(`Usuario ${userName} archivado`);
+    } catch (error: any) {
+      toast.error(error.message || 'Error al archivar usuario');
+    }
+  };
+
+  const handleRestore = async (userId: number, userName: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    try {
+      await restoreMutation.mutateAsync(userId);
+      toast.success(`Usuario ${userName} restaurado`);
+    } catch (error: any) {
+      toast.error(error.message || 'Error al restaurar usuario');
     }
   };
 
@@ -173,6 +195,29 @@ export default function UsersPage() {
                       <Eye className="h-4 w-4 mr-2" />
                       Ver como este usuario
                     </Button>
+                    {user.is_active ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                        onClick={(e) => handleArchive(user.id, user.name, e)}
+                        disabled={archiveMutation.isPending}
+                      >
+                        <Archive className="h-4 w-4 mr-2" />
+                        {archiveMutation.isPending ? 'Archivando...' : 'Archivar usuario'}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={(e) => handleRestore(user.id, user.name, e)}
+                        disabled={restoreMutation.isPending}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        {restoreMutation.isPending ? 'Restaurando...' : 'Restaurar usuario'}
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>

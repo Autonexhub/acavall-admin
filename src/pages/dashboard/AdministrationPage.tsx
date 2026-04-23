@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSessions } from '@/lib/api/queries/useSessions';
 import { useEntities } from '@/lib/api/queries/useEntities';
 import { useTherapists } from '@/lib/api/queries/useTherapists';
@@ -10,29 +11,58 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Label } from '@/components/ui/label';
 import { Clock, Building2, Users, Download, Calendar, Loader2, FolderKanban } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export default function AdministracionPage() {
-  // Default to current month
-  const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
-  const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const { data: sessions, isLoading: sessionsLoading } = useSessions();
+  // Parse dates from URL or default to current month
+  const startDate = useMemo(() => {
+    const param = searchParams.get('start');
+    if (param) {
+      const parsed = parseISO(param);
+      if (isValid(parsed)) return parsed;
+    }
+    return startOfMonth(new Date());
+  }, [searchParams]);
+
+  const endDate = useMemo(() => {
+    const param = searchParams.get('end');
+    if (param) {
+      const parsed = parseISO(param);
+      if (isValid(parsed)) return parsed;
+    }
+    return endOfMonth(new Date());
+  }, [searchParams]);
+
+  const setStartDate = (date: Date) => {
+    setSearchParams((prev) => {
+      prev.set('start', format(date, 'yyyy-MM-dd'));
+      return prev;
+    });
+  };
+
+  const setEndDate = (date: Date) => {
+    setSearchParams((prev) => {
+      prev.set('end', format(date, 'yyyy-MM-dd'));
+      return prev;
+    });
+  };
+
+  // Pass date range to API so it returns sessions with therapists
+  const { data: sessions, isLoading: sessionsLoading } = useSessions({
+    start_date: format(startDate, 'yyyy-MM-dd'),
+    end_date: format(endDate, 'yyyy-MM-dd'),
+  });
   const { data: entitiesData, isLoading: entitiesLoading } = useEntities();
   const { data: therapists, isLoading: therapistsLoading } = useTherapists();
   const { data: projects, isLoading: projectsLoading } = useProjects();
 
   const entities = entitiesData?.data || [];
 
-  // Filter sessions by date range
-  const filteredSessions = useMemo(() => {
-    if (!sessions) return [];
-    return sessions.filter((session) => {
-      const sessionDate = parseISO(session.date);
-      return isWithinInterval(sessionDate, { start: startDate, end: endDate });
-    });
-  }, [sessions, startDate, endDate]);
+  // Sessions are already filtered by API, use them directly
+  const filteredSessions = sessions || [];
 
   const stats = useMemo(() => {
     if (!filteredSessions || !therapists || !entities || entities.length === 0) {

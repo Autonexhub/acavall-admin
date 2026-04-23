@@ -44,7 +44,18 @@
       "Bash(git -C /Users/marcosriganti/Projects/acavall-harmony-next log --oneline)",
       "Bash(git rm:*)",
       "Bash(gh api:*)",
-      "Bash(git ls-tree:*)"
+      "Bash(git ls-tree:*)",
+      "Bash(composer dump-autoload:*)",
+      "Bash(./test-api.sh:*)",
+      "Bash(./test-proper-flow.sh:*)",
+      "Bash(./test-role-access.sh:*)",
+      "Bash(bun run dev)",
+      "Bash(bun run type-check:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(git grep:*)",
+      "Bash(git reset:*)",
+      "Bash(__NEW_LINE_62f1669332ac220f__ php -r \"\nrequire ''vendor/autoload.php'';\n\n$dotenv = Dotenv\\\\Dotenv::createImmutable\\(__DIR__\\);\n$dotenv->load\\(\\);\n\nuse PHPMailer\\\\PHPMailer\\\\PHPMailer;\nuse PHPMailer\\\\PHPMailer\\\\SMTP;\n\n$mail = new PHPMailer\\(true\\);\n$mail->SMTPDebug = SMTP::DEBUG_CONNECTION;\n$mail->isSMTP\\(\\);\n$mail->Host = $_ENV[''SMTP_HOST''];\n$mail->SMTPAuth = true;\n$mail->Username = $_ENV[''SMTP_USER''];\n$mail->Password = $_ENV[''SMTP_PASS''];\n$mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;\n$mail->Port = \\(int\\)$_ENV[''SMTP_PORT''];\n\ntry {\n    $mail->smtpConnect\\(\\);\n    echo ''SMTP Connection successful!'';\n    $mail->smtpClose\\(\\);\n} catch \\(Exception $e\\) {\n    echo ''SMTP Error: '' . $e->getMessage\\(\\);\n}\n\")"
     ]
   }
 }

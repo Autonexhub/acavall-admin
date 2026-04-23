@@ -31,6 +31,12 @@ $app->group('/api/users', function (RouteCollectorProxy $group) {
     // Resend invite email
     $group->post('/{id:[0-9]+}/resend-invite', [$userController, 'resendInvite']);
 
+    // Archive user (deactivate)
+    $group->post('/{id:[0-9]+}/archive', [$userController, 'archive']);
+
+    // Restore user (reactivate)
+    $group->post('/{id:[0-9]+}/restore', [$userController, 'restore']);
+
     // Delete user
     $group->delete('/{id:[0-9]+}', [$userController, 'delete']);
 })->add(new AuthMiddleware());

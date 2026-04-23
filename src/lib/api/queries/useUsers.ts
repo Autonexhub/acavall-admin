@@ -65,3 +65,27 @@ export function useResendUserInvite() {
       apiClient.post<{ message: string }>(API_ENDPOINTS.users.resendInvite(id)),
   });
 }
+
+export function useArchiveUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) =>
+      apiClient.post<{ message: string }>(API_ENDPOINTS.users.archive(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+}
+
+export function useRestoreUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) =>
+      apiClient.post<{ message: string }>(API_ENDPOINTS.users.restore(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+}

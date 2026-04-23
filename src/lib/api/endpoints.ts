@@ -70,6 +70,8 @@ export const API_ENDPOINTS = {
     update: (id: number) => `/users/${id}`,
     delete: (id: number) => `/users/${id}`,
     resendInvite: (id: number) => `/users/${id}/resend-invite`,
+    archive: (id: number) => `/users/${id}/archive`,
+    restore: (id: number) => `/users/${id}/restore`,
   },
 
   // Projects

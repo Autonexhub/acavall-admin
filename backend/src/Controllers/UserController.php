@@ -441,19 +441,120 @@ class UserController
             if (!$success) {
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'Failed to delete user'
+                    'error' => 'Error al eliminar el usuario'
                 ], 500);
             }
 
             return $this->jsonResponse($response, [
                 'success' => true,
-                'message' => 'User deleted successfully'
+                'message' => 'Usuario eliminado correctamente'
             ]);
         } catch (\Exception $e) {
             error_log("Error in UserController::delete - " . $e->getMessage());
             return $this->jsonResponse($response, [
                 'success' => false,
-                'error' => 'Failed to delete user'
+                'error' => 'Error al eliminar usuario: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Archive (deactivate) user
+     * POST /api/users/:id/archive
+     *
+     * @param Request $request
+     * @param Response $response
+     * @param array $args
+     * @return Response
+     */
+    public function archive(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $id = (int)$args['id'];
+
+            // Check if user exists
+            $user = $this->userRepository->findById($id);
+            if (!$user) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Usuario no encontrado'
+                ], 404);
+            }
+
+            // Prevent archiving yourself
+            $currentUserId = $request->getAttribute('user_id');
+            if ($id === $currentUserId) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'No puedes archivar tu propia cuenta'
+                ], 403);
+            }
+
+            // Archive user (set is_active = 0)
+            $success = $this->userRepository->update($id, ['is_active' => 0]);
+
+            if (!$success) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Error al archivar el usuario'
+                ], 500);
+            }
+
+            return $this->jsonResponse($response, [
+                'success' => true,
+                'message' => 'Usuario archivado correctamente'
+            ]);
+        } catch (\Exception $e) {
+            error_log("Error in UserController::archive - " . $e->getMessage());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Error al archivar usuario: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Restore (reactivate) user
+     * POST /api/users/:id/restore
+     *
+     * @param Request $request
+     * @param Response $response
+     * @param array $args
+     * @return Response
+     */
+    public function restore(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $id = (int)$args['id'];
+
+            // Check if user exists
+            $user = $this->userRepository->findById($id);
+            if (!$user) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Usuario no encontrado'
+                ], 404);
+            }
+
+            // Restore user (set is_active = 1)
+            $success = $this->userRepository->update($id, ['is_active' => 1]);
+
+            if (!$success) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Error al restaurar el usuario'
+                ], 500);
+            }
+
+            return $this->jsonResponse($response, [
+                'success' => true,
+                'message' => 'Usuario restaurado correctamente'
+            ]);
+        } catch (\Exception $e) {
+            error_log("Error in UserController::restore - " . $e->getMessage());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Error al restaurar usuario: ' . $e->getMessage()
             ], 500);
         }
     }
