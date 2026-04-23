@@ -32,6 +32,10 @@ $app->group('/api/therapists', function (RouteCollectorProxy $group) {
     $group->put('/{id:[0-9]+}', [$therapistController, 'update'])
         ->add(new RoleMiddleware(['admin', 'coordinator']));
 
+    // Resend invite email (admin/coordinator only)
+    $group->post('/{id:[0-9]+}/resend-invite', [$therapistController, 'resendInvite'])
+        ->add(new RoleMiddleware(['admin', 'coordinator']));
+
     // Delete therapist (admin only)
     $group->delete('/{id:[0-9]+}', [$therapistController, 'delete'])
         ->add(new RoleMiddleware(['admin']));

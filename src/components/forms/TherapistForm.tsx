@@ -13,7 +13,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Loader2, Mail, Key } from 'lucide-react';
 import type { Therapist } from '@/types/models';
 
 interface TherapistFormProps {
@@ -51,6 +52,7 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
       is_active: therapist ? Boolean(therapist.is_active) : true,
       entity_ids: therapist?.entities?.map((e) => e.id) || [],
       create_user_account: false,
+      send_invite: false,
       user_password: '',
     },
   });
@@ -61,6 +63,7 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
   const hasDniPhoto = watch('has_dni_photo');
   const hasCertificateDelitos = watch('has_certificate_delitos');
   const createUserAccount = watch('create_user_account');
+  const sendInvite = watch('send_invite');
   const userEmail = watch('email');
 
   const handleEntityToggle = (entityId: number) => {
@@ -387,67 +390,111 @@ export function TherapistForm({ therapist, onSubmit, isSubmitting }: TherapistFo
               </Button>
             </div>
           ) : (
-            /* No user account yet - show create option */
-            <>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="create_user_account"
-                  checked={createUserAccount}
-                  onCheckedChange={(checked) => setValue('create_user_account', checked as boolean)}
-                  disabled={isSubmitting}
-                />
-                <label
-                  htmlFor="create_user_account"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Crear cuenta de acceso al sistema
-                </label>
-              </div>
-
-              {createUserAccount && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-              <div className="space-y-2">
-                <Label htmlFor="user_email">Email de acceso</Label>
-                <Input
-                  id="user_email"
-                  type="email"
-                  value={userEmail || ''}
-                  disabled
-                  className="bg-muted"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Se usará el email del personal como nombre de usuario
+            /* No user account yet - show create options */
+            <div className="space-y-4">
+              {!userEmail && (
+                <p className="text-sm text-amber-600 dark:text-amber-400 p-3 bg-amber-50 dark:bg-amber-950 rounded-md">
+                  Primero ingresa un email arriba para poder crear una cuenta de usuario.
                 </p>
-              </div>
+              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="user_password">
-                  Contraseña <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="user_password"
-                  type="password"
-                  {...register('user_password')}
-                  placeholder="Mínimo 6 caracteres"
-                  disabled={isSubmitting}
-                />
-                {errors.user_password && (
-                  <p className="text-sm text-destructive">{errors.user_password.message}</p>
-                )}
-              </div>
+              {userEmail && (
+                <>
+                  <RadioGroup
+                    value={sendInvite ? 'invite' : createUserAccount ? 'password' : 'none'}
+                    onValueChange={(value) => {
+                      if (value === 'invite') {
+                        setValue('send_invite', true);
+                        setValue('create_user_account', false);
+                        setValue('user_password', '');
+                      } else if (value === 'password') {
+                        setValue('send_invite', false);
+                        setValue('create_user_account', true);
+                      } else {
+                        setValue('send_invite', false);
+                        setValue('create_user_account', false);
+                        setValue('user_password', '');
+                      }
+                    }}
+                    className="space-y-3"
+                  >
+                    <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <RadioGroupItem value="none" id="none" className="mt-1" />
+                      <div className="flex-1">
+                        <Label htmlFor="none" className="font-medium cursor-pointer">
+                          No crear cuenta de usuario
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          El personal no tendrá acceso al sistema
+                        </p>
+                      </div>
+                    </div>
 
-              <div className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-3 rounded-md">
-                <p className="font-medium mb-1">ℹ️ Permisos de la cuenta:</p>
-                <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li>Podrá ver sus propias sesiones y horas trabajadas</li>
-                  <li>Podrá ver su historial laboral</li>
-                  <li>NO podrá ver información de otros personal</li>
-                  <li>NO podrá crear o editar sesiones</li>
-                </ul>
-              </div>
+                    <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <RadioGroupItem value="invite" id="invite" className="mt-1" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-primary" />
+                          <Label htmlFor="invite" className="font-medium cursor-pointer">
+                            Enviar invitación por email (Recomendado)
+                          </Label>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Se enviará un email a <strong>{userEmail}</strong> para que el personal configure su propia contraseña
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <RadioGroupItem value="password" id="password" className="mt-1" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Key className="h-4 w-4 text-muted-foreground" />
+                          <Label htmlFor="password" className="font-medium cursor-pointer">
+                            Establecer contraseña manualmente
+                          </Label>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Define una contraseña inicial y se enviará por email
+                        </p>
+                      </div>
+                    </div>
+                  </RadioGroup>
+
+                  {createUserAccount && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-muted/30 ml-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="user_password">
+                          Contraseña <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id="user_password"
+                          type="password"
+                          {...register('user_password')}
+                          placeholder="Mínimo 6 caracteres"
+                          disabled={isSubmitting}
+                        />
+                        {errors.user_password && (
+                          <p className="text-sm text-destructive">{errors.user_password.message}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {(sendInvite || createUserAccount) && (
+                    <div className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-3 rounded-md">
+                      <p className="font-medium mb-1">Permisos de la cuenta:</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li>Podrá ver sus propias sesiones y horas trabajadas</li>
+                        <li>Podrá ver su historial laboral</li>
+                        <li>NO podrá ver información de otros personal</li>
+                        <li>NO podrá crear o editar sesiones</li>
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          )}
-            </>
           )}
         </CardContent>
       </Card>

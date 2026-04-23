@@ -342,4 +342,113 @@ Si tienes alguna pregunta, no dudes en contactarnos.
 Fundación Acavall
 " . date('Y');
     }
+
+    /**
+     * Send invite email for new user to set their password
+     *
+     * @param string $toEmail
+     * @param string $userName
+     * @param string $setupUrl
+     * @return bool
+     */
+    public function sendInviteEmail(string $toEmail, string $userName, string $setupUrl): bool
+    {
+        $subject = 'Invitación a Fundación Acavall - Configura tu cuenta';
+
+        $htmlBody = $this->getInviteEmailTemplate($userName, $toEmail, $setupUrl);
+        $plainBody = $this->getInviteEmailPlainText($userName, $toEmail, $setupUrl);
+
+        return $this->sendEmail($toEmail, $subject, $htmlBody, $plainBody);
+    }
+
+    /**
+     * Get invite email HTML template
+     *
+     * @param string $userName
+     * @param string $email
+     * @param string $setupUrl
+     * @return string
+     */
+    private function getInviteEmailTemplate(string $userName, string $email, string $setupUrl): string
+    {
+        return "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #F7DC6F; padding: 30px; text-align: center; }
+                .content { background-color: #f9f9f9; padding: 30px; }
+                .credentials { background-color: #fff; padding: 20px; border-left: 4px solid #F7DC6F; margin: 20px 0; }
+                .button { display: inline-block; padding: 12px 30px; background-color: #F7DC6F; color: #333; text-decoration: none; border-radius: 5px; font-weight: bold; }
+                .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1 style='margin: 0; color: #333;'>Fundación Acavall</h1>
+                </div>
+                <div class='content'>
+                    <h2>¡Hola {$userName}!</h2>
+                    <p>Has sido invitado/a a unirte al sistema de gestión de Fundación Acavall.</p>
+                    <p>Ahora podrás acceder al sistema para ver tus sesiones y reportes.</p>
+
+                    <div class='credentials'>
+                        <h3 style='margin-top: 0;'>Tu información de acceso:</h3>
+                        <p><strong>Usuario:</strong> {$email}</p>
+                    </div>
+
+                    <p>Para comenzar, necesitas crear tu contraseña haciendo clic en el siguiente botón:</p>
+
+                    <p style='text-align: center; margin: 30px 0;'>
+                        <a href='{$setupUrl}' class='button'>Configurar mi Contraseña</a>
+                    </p>
+
+                    <p><strong>Este enlace expirará en 7 días.</strong></p>
+
+                    <p>Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+                    <p style='word-break: break-all; color: #666;'>{$setupUrl}</p>
+
+                    <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
+                </div>
+                <div class='footer'>
+                    <p>&copy; " . date('Y') . " Fundación Acavall. Todos los derechos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        ";
+    }
+
+    /**
+     * Get invite email plain text
+     *
+     * @param string $userName
+     * @param string $email
+     * @param string $setupUrl
+     * @return string
+     */
+    private function getInviteEmailPlainText(string $userName, string $email, string $setupUrl): string
+    {
+        return "
+¡Hola {$userName}!
+
+Has sido invitado/a a unirte al sistema de gestión de Fundación Acavall.
+
+Tu información de acceso:
+Usuario: {$email}
+
+Para comenzar, necesitas crear tu contraseña visitando el siguiente enlace:
+{$setupUrl}
+
+Este enlace expirará en 7 días.
+
+Si tienes alguna pregunta, no dudes en contactarnos.
+
+Fundación Acavall
+" . date('Y');
+    }
 }

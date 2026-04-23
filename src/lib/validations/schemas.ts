@@ -26,8 +26,21 @@ export const therapistSchema = z.object({
   entity_ids: z.array(z.number()).optional(),
   // User account fields
   create_user_account: z.boolean().default(false),
-  user_password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional(),
-});
+  send_invite: z.boolean().default(false),
+  user_password: z.string().optional(),
+}).refine(
+  (data) => {
+    // If create_user_account is true, password must be at least 6 characters
+    if (data.create_user_account && (!data.user_password || data.user_password.length < 6)) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'La contraseña debe tener al menos 6 caracteres',
+    path: ['user_password'],
+  }
+);
 
 // Recurrence rule schema
 const recurrenceRuleSchema = z.object({

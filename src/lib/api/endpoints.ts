@@ -27,6 +27,7 @@ export const API_ENDPOINTS = {
     create: '/therapists',
     update: (id: number) => `/therapists/${id}`,
     delete: (id: number) => `/therapists/${id}`,
+    resendInvite: (id: number) => `/therapists/${id}/resend-invite`,
   },
 
   // Sessions

@@ -6,21 +6,28 @@ namespace App\Controllers;
 
 use App\Repositories\TherapistRepository;
 use App\Repositories\StaffWorkHistoryRepository;
+use App\Repositories\UserRepository;
 use App\Services\EmailService;
+use App\Infrastructure\Database\Connection;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use PDO;
 
 class TherapistController
 {
     private TherapistRepository $therapistRepository;
     private StaffWorkHistoryRepository $workHistoryRepository;
+    private UserRepository $userRepository;
     private EmailService $emailService;
+    private PDO $db;
 
     public function __construct()
     {
         $this->therapistRepository = new TherapistRepository();
         $this->workHistoryRepository = new StaffWorkHistoryRepository();
+        $this->userRepository = new UserRepository();
         $this->emailService = new EmailService();
+        $this->db = Connection::getInstance();
     }
 
     /**
@@ -136,17 +143,15 @@ class TherapistController
                 $this->therapistRepository->attachEntities($id, $body['entity_ids']);
             }
 
-            // Create user account if requested
+            // Create user account if requested (with password - legacy flow)
             if (!empty($body['create_user_account']) && !empty($body['email']) && !empty($body['user_password'])) {
                 try {
-                    $userRepository = new \App\Repositories\UserRepository();
-
                     // Check if user already exists with this email
-                    $existingUser = $userRepository->findByEmail($body['email']);
+                    $existingUser = $this->userRepository->findByEmail($body['email']);
 
                     if (!$existingUser) {
                         $plainPassword = $body['user_password'];
-                        $userId = $userRepository->create([
+                        $userId = $this->userRepository->create([
                             'name' => $body['name'],
                             'email' => $body['email'],
                             'password_hash' => password_hash($plainPassword, PASSWORD_BCRYPT),
@@ -175,6 +180,58 @@ class TherapistController
                     }
                 } catch (\Exception $e) {
                     error_log("Error creating user account for therapist: " . $e->getMessage());
+                }
+            }
+
+            // Send invite email (user sets their own password)
+            if (!empty($body['send_invite']) && !empty($body['email'])) {
+                try {
+                    // Check if user already exists with this email
+                    $existingUser = $this->userRepository->findByEmail($body['email']);
+
+                    if (!$existingUser) {
+                        // Create user with a random unusable password (requires reset)
+                        $randomHash = password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT);
+                        $userId = $this->userRepository->create([
+                            'name' => $body['name'],
+                            'email' => $body['email'],
+                            'password_hash' => $randomHash,
+                            'role' => 'therapist',
+                            'is_active' => 1
+                        ]);
+
+                        // Link user to therapist
+                        if ($userId) {
+                            $this->therapistRepository->update($id, ['user_id' => $userId]);
+
+                            // Generate invite token (valid for 7 days)
+                            $token = bin2hex(random_bytes(32));
+                            $expiresAt = date('Y-m-d H:i:s', strtotime('+7 days'));
+
+                            // Store token in database
+                            $stmt = $this->db->prepare(
+                                'INSERT INTO password_reset_tokens (email, token, expires_at) VALUES (?, ?, ?)'
+                            );
+                            $stmt->execute([$body['email'], $token, $expiresAt]);
+
+                            // Send invite email
+                            $setupUrl = ($_ENV['FRONTEND_URL'] ?? 'http://localhost:3000') . '/reset-password?token=' . $token;
+                            try {
+                                $emailResult = $this->emailService->sendInviteEmail(
+                                    $body['email'],
+                                    $body['name'],
+                                    $setupUrl
+                                );
+                                error_log("Invite email sent to {$body['email']}: " . ($emailResult ? 'SUCCESS' : 'FAILED'));
+                            } catch (\Exception $e) {
+                                error_log("Error sending invite email: " . $e->getMessage());
+                            }
+                        }
+                    } else {
+                        error_log("User account already exists for email: {$body['email']}");
+                    }
+                } catch (\Exception $e) {
+                    error_log("Error sending invite for therapist: " . $e->getMessage());
                 }
             }
 
@@ -280,21 +337,19 @@ class TherapistController
                 }
             }
 
-            // Create user account if requested (and not already linked)
+            // Create user account if requested (with password - legacy flow)
             if (!empty($body['create_user_account']) && !empty($body['email']) && !empty($body['user_password'])) {
                 try {
                     // Check if therapist already has a user account
                     $currentTherapist = $this->therapistRepository->findById($id);
 
                     if (empty($currentTherapist['user_id'])) {
-                        $userRepository = new \App\Repositories\UserRepository();
-
                         // Check if user already exists with this email
-                        $existingUser = $userRepository->findByEmail($body['email']);
+                        $existingUser = $this->userRepository->findByEmail($body['email']);
 
                         if (!$existingUser) {
                             $plainPassword = $body['user_password'];
-                            $userId = $userRepository->create([
+                            $userId = $this->userRepository->create([
                                 'name' => $data['name'] ?? $currentTherapist['name'],
                                 'email' => $body['email'],
                                 'password_hash' => password_hash($plainPassword, PASSWORD_BCRYPT),
@@ -329,6 +384,65 @@ class TherapistController
                 }
             }
 
+            // Send invite email (user sets their own password)
+            if (!empty($body['send_invite']) && !empty($body['email'])) {
+                try {
+                    // Check if therapist already has a user account
+                    $currentTherapist = $this->therapistRepository->findById($id);
+
+                    if (empty($currentTherapist['user_id'])) {
+                        // Check if user already exists with this email
+                        $existingUser = $this->userRepository->findByEmail($body['email']);
+
+                        if (!$existingUser) {
+                            // Create user with a random unusable password (requires reset)
+                            $randomHash = password_hash(bin2hex(random_bytes(32)), PASSWORD_BCRYPT);
+                            $userId = $this->userRepository->create([
+                                'name' => $data['name'] ?? $currentTherapist['name'],
+                                'email' => $body['email'],
+                                'password_hash' => $randomHash,
+                                'role' => 'therapist',
+                                'is_active' => 1
+                            ]);
+
+                            // Link user to therapist
+                            if ($userId) {
+                                $this->therapistRepository->update($id, ['user_id' => $userId]);
+
+                                // Generate invite token (valid for 7 days)
+                                $token = bin2hex(random_bytes(32));
+                                $expiresAt = date('Y-m-d H:i:s', strtotime('+7 days'));
+
+                                // Store token in database
+                                $stmt = $this->db->prepare(
+                                    'INSERT INTO password_reset_tokens (email, token, expires_at) VALUES (?, ?, ?)'
+                                );
+                                $stmt->execute([$body['email'], $token, $expiresAt]);
+
+                                // Send invite email
+                                $setupUrl = ($_ENV['FRONTEND_URL'] ?? 'http://localhost:3000') . '/reset-password?token=' . $token;
+                                try {
+                                    $emailResult = $this->emailService->sendInviteEmail(
+                                        $body['email'],
+                                        $data['name'] ?? $currentTherapist['name'],
+                                        $setupUrl
+                                    );
+                                    error_log("Invite email sent to {$body['email']}: " . ($emailResult ? 'SUCCESS' : 'FAILED'));
+                                } catch (\Exception $e) {
+                                    error_log("Error sending invite email: " . $e->getMessage());
+                                }
+                            }
+                        } else {
+                            error_log("User account already exists for email: {$body['email']}");
+                        }
+                    } else {
+                        error_log("Therapist already has a user account linked (user_id: {$currentTherapist['user_id']})");
+                    }
+                } catch (\Exception $e) {
+                    error_log("Error sending invite for therapist: " . $e->getMessage());
+                }
+            }
+
             $updatedTherapist = $this->therapistRepository->findWithWorkHistory($id);
 
             return $this->jsonResponse($response, [
@@ -340,6 +454,89 @@ class TherapistController
             return $this->jsonResponse($response, [
                 'success' => false,
                 'error' => 'Failed to update therapist'
+            ], 500);
+        }
+    }
+
+    /**
+     * Resend invite email to therapist
+     * POST /api/therapists/:id/resend-invite
+     *
+     * @param Request $request
+     * @param Response $response
+     * @param array $args
+     * @return Response
+     */
+    public function resendInvite(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $id = (int)$args['id'];
+
+            // Check if therapist exists
+            $therapist = $this->therapistRepository->findById($id);
+            if (!$therapist) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Therapist not found'
+                ], 404);
+            }
+
+            // Check if therapist has email
+            if (empty($therapist['email'])) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Therapist does not have an email address'
+                ], 400);
+            }
+
+            // Check if therapist has a linked user account
+            if (empty($therapist['user_id'])) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Therapist does not have a user account. Please create one first.'
+                ], 400);
+            }
+
+            // Invalidate any existing tokens for this email
+            $stmt = $this->db->prepare(
+                'UPDATE password_reset_tokens SET used = 1 WHERE email = ?'
+            );
+            $stmt->execute([$therapist['email']]);
+
+            // Generate new invite token (valid for 7 days)
+            $token = bin2hex(random_bytes(32));
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+7 days'));
+
+            // Store token in database
+            $stmt = $this->db->prepare(
+                'INSERT INTO password_reset_tokens (email, token, expires_at) VALUES (?, ?, ?)'
+            );
+            $stmt->execute([$therapist['email'], $token, $expiresAt]);
+
+            // Send invite email
+            $setupUrl = ($_ENV['FRONTEND_URL'] ?? 'http://localhost:3000') . '/reset-password?token=' . $token;
+            $emailResult = $this->emailService->sendInviteEmail(
+                $therapist['email'],
+                $therapist['name'],
+                $setupUrl
+            );
+
+            if ($emailResult) {
+                return $this->jsonResponse($response, [
+                    'success' => true,
+                    'message' => 'Invite email sent successfully'
+                ]);
+            } else {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Failed to send invite email'
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            error_log("Error in TherapistController::resendInvite - " . $e->getMessage());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Failed to resend invite'
             ], 500);
         }
     }
