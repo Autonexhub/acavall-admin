@@ -58,3 +58,10 @@ export function useDeleteUser() {
     },
   });
 }
+
+export function useResendUserInvite() {
+  return useMutation({
+    mutationFn: (id: number) =>
+      apiClient.post<{ message: string }>(API_ENDPOINTS.users.resendInvite(id)),
+  });
+}

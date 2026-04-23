@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
     create: '/users',
     update: (id: number) => `/users/${id}`,
     delete: (id: number) => `/users/${id}`,
+    resendInvite: (id: number) => `/users/${id}/resend-invite`,
   },
 
   // Projects

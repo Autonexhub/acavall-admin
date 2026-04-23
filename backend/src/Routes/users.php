@@ -28,6 +28,9 @@ $app->group('/api/users', function (RouteCollectorProxy $group) {
     // Update user
     $group->put('/{id:[0-9]+}', [$userController, 'update']);
 
+    // Resend invite email
+    $group->post('/{id:[0-9]+}/resend-invite', [$userController, 'resendInvite']);
+
     // Delete user
     $group->delete('/{id:[0-9]+}', [$userController, 'delete']);
 })->add(new AuthMiddleware());

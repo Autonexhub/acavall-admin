@@ -5,16 +5,23 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Repositories\UserRepository;
+use App\Services\EmailService;
+use App\Infrastructure\Database\Connection;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use PDO;
 
 class UserController
 {
     private UserRepository $userRepository;
+    private EmailService $emailService;
+    private PDO $db;
 
     public function __construct()
     {
         $this->userRepository = new UserRepository();
+        $this->emailService = new EmailService();
+        $this->db = Connection::getInstance();
     }
 
     /**
@@ -303,6 +310,88 @@ class UserController
             return $this->jsonResponse($response, [
                 'success' => false,
                 'error' => 'Error al actualizar usuario: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Resend invite email to user
+     * POST /api/users/:id/resend-invite
+     *
+     * @param Request $request
+     * @param Response $response
+     * @param array $args
+     * @return Response
+     */
+    public function resendInvite(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $id = (int)$args['id'];
+
+            error_log("UserController::resendInvite - Starting for user ID: {$id}");
+
+            // Check if user exists
+            $user = $this->userRepository->findById($id);
+            if (!$user) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Usuario no encontrado'
+                ], 404);
+            }
+
+            // Check if user has email
+            if (empty($user['email'])) {
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'El usuario no tiene email configurado'
+                ], 400);
+            }
+
+            // Invalidate any existing tokens for this email
+            $stmt = $this->db->prepare(
+                'UPDATE password_reset_tokens SET used = 1 WHERE email = ?'
+            );
+            $stmt->execute([$user['email']]);
+
+            // Generate new invite token (valid for 7 days)
+            $token = bin2hex(random_bytes(32));
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+7 days'));
+
+            // Store token in database
+            $stmt = $this->db->prepare(
+                'INSERT INTO password_reset_tokens (email, token, expires_at) VALUES (?, ?, ?)'
+            );
+            $stmt->execute([$user['email'], $token, $expiresAt]);
+
+            // Send invite email
+            $setupUrl = ($_ENV['FRONTEND_URL'] ?? 'http://localhost:3000') . '/reset-password?token=' . $token;
+
+            error_log("UserController::resendInvite - Sending invite to: {$user['email']}");
+
+            $emailResult = $this->emailService->sendInviteEmail(
+                $user['email'],
+                $user['name'],
+                $setupUrl
+            );
+
+            if ($emailResult) {
+                error_log("UserController::resendInvite - Email sent successfully");
+                return $this->jsonResponse($response, [
+                    'success' => true,
+                    'message' => 'Invitación enviada correctamente a ' . $user['email']
+                ]);
+            } else {
+                error_log("UserController::resendInvite - Email sending failed");
+                return $this->jsonResponse($response, [
+                    'success' => false,
+                    'error' => 'Error al enviar el email de invitación'
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            error_log("UserController::resendInvite - Exception: " . $e->getMessage());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Error al reenviar invitación: ' . $e->getMessage()
             ], 500);
         }
     }
