@@ -312,17 +312,24 @@ class AuthController
             }
 
             // Find user
+            error_log("resetPassword: Looking for user with email: " . $resetToken['email']);
             $user = $this->userRepository->findByEmail($resetToken['email']);
             if (!$user) {
+                error_log("resetPassword: User not found for email: " . $resetToken['email']);
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'User not found'
+                    'error' => 'Usuario no encontrado'
                 ], 404);
             }
 
-            // Update password
+            error_log("resetPassword: Found user ID: " . $user['id']);
+
+            // Update password - use password_hash column name
             $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-            $this->userRepository->update((int)$user['id'], ['password' => $hashedPassword]);
+            error_log("resetPassword: Updating password for user ID: " . $user['id']);
+
+            $updateResult = $this->userRepository->update((int)$user['id'], ['password_hash' => $hashedPassword]);
+            error_log("resetPassword: Update result: " . ($updateResult ? 'success' : 'failed'));
 
             // Mark token as used
             $stmt = $this->db->prepare(
@@ -332,13 +339,20 @@ class AuthController
 
             return $this->jsonResponse($response, [
                 'success' => true,
-                'message' => 'Password reset successfully'
+                'message' => 'Contraseña actualizada correctamente'
             ], 200);
-        } catch (\Exception $e) {
-            error_log('Error in resetPassword: ' . $e->getMessage());
+        } catch (\PDOException $e) {
+            error_log('resetPassword PDO Error: ' . $e->getMessage());
+            error_log('resetPassword SQL State: ' . $e->getCode());
             return $this->jsonResponse($response, [
                 'success' => false,
-                'error' => 'Failed to reset password'
+                'error' => 'Error de base de datos: ' . $e->getMessage()
+            ], 500);
+        } catch (\Exception $e) {
+            error_log('resetPassword Error: ' . $e->getMessage());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Error al restablecer contraseña: ' . $e->getMessage()
             ], 500);
         }
     }
