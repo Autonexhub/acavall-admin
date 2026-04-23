@@ -90,8 +90,8 @@ jobs:
           # Frontend URL (for email links)
           FRONTEND_URL=https://${{ env.DEPLOY_DOMAIN }}
 
-          # Email Configuration
-          MAIL_FROM_ADDRESS=noreply@fundacionacavall.com
+          # Email Configuration (must match SMTP_USER for authentication)
+          MAIL_FROM_ADDRESS=${{ secrets.SMTP_USER }}
           MAIL_FROM_NAME="Fundación Acavall"
 
           # SMTP Configuration
@@ -101,7 +101,7 @@ jobs:
           SMTP_USER=${{ secrets.SMTP_USER }}
           SMTP_PASS=${{ secrets.SMTP_PASS }}
           SMTP_FROM_NAME="Fundación Acavall"
-          SMTP_FROM_EMAIL=noreply@fundacionacavall.com
+          SMTP_FROM_EMAIL=${{ secrets.SMTP_USER }}
           EOF
 
       - name: Prepare deployment package
