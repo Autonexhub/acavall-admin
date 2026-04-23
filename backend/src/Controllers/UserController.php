@@ -99,49 +99,70 @@ class UserController
         try {
             $body = $request->getParsedBody();
 
+            error_log("UserController::create - Starting user creation");
+            error_log("UserController::create - Request body: " . json_encode([
+                'name' => $body['name'] ?? 'NOT SET',
+                'email' => $body['email'] ?? 'NOT SET',
+                'role' => $body['role'] ?? 'NOT SET',
+                'password' => isset($body['password']) ? 'SET (length: ' . strlen($body['password']) . ')' : 'NOT SET'
+            ]));
+
             // Validate required fields
             if (empty($body['name'])) {
+                error_log("UserController::create - Validation failed: name is empty");
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'El nombre es obligatorio'
+                    'error' => 'El nombre es obligatorio',
+                    'field' => 'name'
                 ], 400);
             }
 
             if (empty($body['email'])) {
+                error_log("UserController::create - Validation failed: email is empty");
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'El email es obligatorio'
+                    'error' => 'El email es obligatorio',
+                    'field' => 'email'
                 ], 400);
             }
 
             if (empty($body['password'])) {
+                error_log("UserController::create - Validation failed: password is empty");
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'La contraseña es obligatoria'
+                    'error' => 'La contraseña es obligatoria',
+                    'field' => 'password'
                 ], 400);
             }
 
             if (strlen($body['password']) < 6) {
+                error_log("UserController::create - Validation failed: password too short");
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'La contraseña debe tener al menos 6 caracteres'
+                    'error' => 'La contraseña debe tener al menos 6 caracteres',
+                    'field' => 'password'
                 ], 400);
             }
 
             // Validate email format
             if (!filter_var($body['email'], FILTER_VALIDATE_EMAIL)) {
+                error_log("UserController::create - Validation failed: invalid email format");
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'El formato del email no es válido'
+                    'error' => 'El formato del email no es válido',
+                    'field' => 'email'
                 ], 400);
             }
 
             // Check if email already exists
+            error_log("UserController::create - Checking if email exists: " . $body['email']);
             $existingUser = $this->userRepository->findByEmail($body['email']);
             if ($existingUser) {
+                error_log("UserController::create - Email already exists for user ID: " . $existingUser['id']);
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'Ya existe un usuario con este email'
+                    'error' => 'Ya existe un usuario con este email: ' . $body['email'],
+                    'field' => 'email'
                 ], 409);
             }
 
@@ -157,14 +178,24 @@ class UserController
                 'phone' => $body['phone'] ?? null,
             ];
 
+            error_log("UserController::create - Creating user with data: " . json_encode([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'role' => $data['role'],
+                'phone' => $data['phone']
+            ]));
+
             $id = $this->userRepository->create($data);
 
             if (!$id) {
+                error_log("UserController::create - Repository returned null/false ID");
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'Error al crear el usuario en la base de datos'
+                    'error' => 'Error al crear el usuario en la base de datos. El repositorio no devolvió un ID válido.'
                 ], 500);
             }
+
+            error_log("UserController::create - User created successfully with ID: " . $id);
 
             $user = $this->userRepository->findById($id);
             $user = $this->userRepository->sanitizeUser($user);
@@ -173,8 +204,17 @@ class UserController
                 'success' => true,
                 'data' => $user
             ], 201);
+        } catch (\PDOException $e) {
+            error_log("UserController::create - PDO Exception: " . $e->getMessage());
+            error_log("UserController::create - SQL State: " . $e->getCode());
+            return $this->jsonResponse($response, [
+                'success' => false,
+                'error' => 'Error de base de datos: ' . $e->getMessage(),
+                'code' => $e->getCode()
+            ], 500);
         } catch (\Exception $e) {
-            error_log("Error in UserController::create - " . $e->getMessage());
+            error_log("UserController::create - Exception: " . $e->getMessage());
+            error_log("UserController::create - Stack trace: " . $e->getTraceAsString());
             return $this->jsonResponse($response, [
                 'success' => false,
                 'error' => 'Error al crear usuario: ' . $e->getMessage()

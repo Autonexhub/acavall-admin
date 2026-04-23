@@ -61,6 +61,7 @@ abstract class BaseRepository
      *
      * @param array $data
      * @return int|null Last insert ID or null on failure
+     * @throws PDOException
      */
     public function create(array $data): ?int
     {
@@ -72,13 +73,30 @@ abstract class BaseRepository
             $placeholders = implode(', ', array_fill(0, count($fields), '?'));
 
             $sql = "INSERT INTO {$this->table} ({$fieldsList}) VALUES ({$placeholders})";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute($values);
 
-            return (int)$this->db->lastInsertId();
+            error_log("BaseRepository::create - Table: {$this->table}");
+            error_log("BaseRepository::create - SQL: {$sql}");
+            error_log("BaseRepository::create - Fields: " . json_encode($fields));
+
+            $stmt = $this->db->prepare($sql);
+            $result = $stmt->execute($values);
+
+            if (!$result) {
+                $errorInfo = $stmt->errorInfo();
+                error_log("BaseRepository::create - Execute failed. Error info: " . json_encode($errorInfo));
+                return null;
+            }
+
+            $lastId = (int)$this->db->lastInsertId();
+            error_log("BaseRepository::create - Success. Last insert ID: {$lastId}");
+
+            return $lastId;
         } catch (PDOException $e) {
-            error_log("Error in create: " . $e->getMessage());
-            return null;
+            error_log("BaseRepository::create - PDOException: " . $e->getMessage());
+            error_log("BaseRepository::create - SQL State: " . $e->getCode());
+            error_log("BaseRepository::create - Table: {$this->table}");
+            // Re-throw so controllers can handle with proper error messages
+            throw $e;
         }
     }
 
@@ -88,6 +106,7 @@ abstract class BaseRepository
      * @param int $id
      * @param array $data
      * @return bool
+     * @throws PDOException
      */
     public function update(int $id, array $data): bool
     {
@@ -104,12 +123,26 @@ abstract class BaseRepository
             $fieldsList = implode(', ', $fields);
 
             $sql = "UPDATE {$this->table} SET {$fieldsList} WHERE id = ?";
-            $stmt = $this->db->prepare($sql);
 
-            return $stmt->execute($values);
+            error_log("BaseRepository::update - Table: {$this->table}, ID: {$id}");
+            error_log("BaseRepository::update - SQL: {$sql}");
+            error_log("BaseRepository::update - Fields: " . json_encode(array_keys($data)));
+
+            $stmt = $this->db->prepare($sql);
+            $result = $stmt->execute($values);
+
+            if (!$result) {
+                $errorInfo = $stmt->errorInfo();
+                error_log("BaseRepository::update - Execute failed. Error info: " . json_encode($errorInfo));
+            } else {
+                error_log("BaseRepository::update - Success. Rows affected: " . $stmt->rowCount());
+            }
+
+            return $result;
         } catch (PDOException $e) {
-            error_log("Error in update: " . $e->getMessage());
-            return false;
+            error_log("BaseRepository::update - PDOException: " . $e->getMessage());
+            error_log("BaseRepository::update - SQL State: " . $e->getCode());
+            throw $e;
         }
     }
 
