@@ -8,12 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const {
     register,
@@ -26,6 +29,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       setIsLoading(true);
+      setLoginError(null);
       const user = await login(data as { email: string; password: string });
       toast.success('Inicio de sesión exitoso');
 
@@ -36,7 +40,7 @@ export default function LoginPage() {
         navigate('/dashboard');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Error al iniciar sesión');
+      setLoginError(error.message || 'Error al iniciar sesión. Inténtalo de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -60,6 +64,13 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {loginError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{loginError}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Correo electrónico</Label>
               <Input

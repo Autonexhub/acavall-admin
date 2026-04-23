@@ -19,15 +19,43 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError<ApiError>) => {
+        // Extract error message from response body
+        const errorMessage = error.response?.data?.error || error.message;
+
+        // Translate common error messages to Spanish
+        const translatedMessage = this.translateError(errorMessage);
+
         if (error.response?.status === 401) {
-          // Unauthorized - redirect to login
-          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          // Unauthorized - redirect to login (except if already on login page)
+          if (typeof window !== 'undefined' &&
+              !window.location.pathname.includes('/login') &&
+              !window.location.pathname.includes('/reset-password') &&
+              !window.location.pathname.includes('/forgot-password')) {
             window.location.href = '/login';
           }
         }
-        return Promise.reject(error);
+
+        // Create a new error with the translated message
+        const enhancedError = new Error(translatedMessage);
+        (enhancedError as any).status = error.response?.status;
+        (enhancedError as any).originalError = error;
+        return Promise.reject(enhancedError);
       }
     );
+  }
+
+  private translateError(message: string): string {
+    const translations: Record<string, string> = {
+      'Invalid credentials': 'Credenciales inválidas. Verifica tu email y contraseña.',
+      'Email and password are required': 'El email y la contraseña son obligatorios.',
+      'User not found': 'Usuario no encontrado.',
+      'Invalid or expired token': 'El enlace ha expirado o no es válido.',
+      'Password must be at least 6 characters': 'La contraseña debe tener al menos 6 caracteres.',
+      'Email is required': 'El email es obligatorio.',
+      'Token is required': 'Token no proporcionado.',
+      'Request failed': 'Error en la solicitud.',
+    };
+    return translations[message] || message;
   }
 
   async get<T>(url: string, params?: any): Promise<T> {
