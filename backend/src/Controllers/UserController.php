@@ -368,23 +368,31 @@ class UserController
 
             error_log("UserController::resendInvite - Sending invite to: {$user['email']}");
 
-            $emailResult = $this->emailService->sendInviteEmail(
-                $user['email'],
-                $user['name'],
-                $setupUrl
-            );
+            try {
+                $emailResult = $this->emailService->sendInviteEmail(
+                    $user['email'],
+                    $user['name'],
+                    $setupUrl
+                );
 
-            if ($emailResult) {
-                error_log("UserController::resendInvite - Email sent successfully");
-                return $this->jsonResponse($response, [
-                    'success' => true,
-                    'message' => 'Invitación enviada correctamente a ' . $user['email']
-                ]);
-            } else {
-                error_log("UserController::resendInvite - Email sending failed");
+                if ($emailResult) {
+                    error_log("UserController::resendInvite - Email sent successfully");
+                    return $this->jsonResponse($response, [
+                        'success' => true,
+                        'message' => 'Invitación enviada correctamente a ' . $user['email']
+                    ]);
+                } else {
+                    error_log("UserController::resendInvite - Email sending returned false");
+                    return $this->jsonResponse($response, [
+                        'success' => false,
+                        'error' => 'El servidor de correo no pudo enviar el email'
+                    ], 500);
+                }
+            } catch (\Exception $emailError) {
+                error_log("UserController::resendInvite - Email error: " . $emailError->getMessage());
                 return $this->jsonResponse($response, [
                     'success' => false,
-                    'error' => 'Error al enviar el email de invitación'
+                    'error' => 'Error de email: ' . $emailError->getMessage()
                 ], 500);
             }
         } catch (\Exception $e) {

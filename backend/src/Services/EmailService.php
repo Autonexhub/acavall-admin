@@ -26,6 +26,8 @@ class EmailService
         $this->smtpSecure = filter_var($_ENV['SMTP_SECURE'] ?? 'true', FILTER_VALIDATE_BOOLEAN);
         $this->smtpUser = $_ENV['SMTP_USER'] ?? '';
         $this->smtpPass = $_ENV['SMTP_PASS'] ?? '';
+
+        error_log("EmailService::__construct - SMTP Config: host={$this->smtpHost}, port={$this->smtpPort}, secure=" . ($this->smtpSecure ? 'true' : 'false') . ", user={$this->smtpUser}, from={$this->fromEmail}");
     }
 
     /**
@@ -72,11 +74,35 @@ class EmailService
      * @param string $htmlBody
      * @param string $plainBody
      * @return bool
+     * @throws \Exception
      */
     private function sendEmail(string $to, string $subject, string $htmlBody, string $plainBody): bool
     {
+        error_log("EmailService::sendEmail - Starting to send email to: {$to}");
+        error_log("EmailService::sendEmail - Subject: {$subject}");
+        error_log("EmailService::sendEmail - SMTP: {$this->smtpHost}:{$this->smtpPort}");
+
+        // Validate SMTP configuration
+        if (empty($this->smtpHost) || $this->smtpHost === 'localhost') {
+            $error = "SMTP no configurado correctamente. Host: {$this->smtpHost}";
+            error_log("EmailService::sendEmail - ERROR: {$error}");
+            throw new \Exception($error);
+        }
+
+        if (empty($this->smtpUser) || empty($this->smtpPass)) {
+            $error = "Credenciales SMTP no configuradas";
+            error_log("EmailService::sendEmail - ERROR: {$error}");
+            throw new \Exception($error);
+        }
+
         try {
             $mail = new PHPMailer(true);
+
+            // Enable verbose debug output for logging
+            $mail->SMTPDebug = 0; // Set to 2 for verbose debugging
+            $mail->Debugoutput = function($str, $level) {
+                error_log("PHPMailer Debug [{$level}]: {$str}");
+            };
 
             // Server settings
             $mail->isSMTP();
@@ -87,6 +113,9 @@ class EmailService
             $mail->SMTPSecure = $this->smtpSecure ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = $this->smtpPort;
             $mail->CharSet = 'UTF-8';
+            $mail->Timeout = 30; // 30 second timeout
+
+            error_log("EmailService::sendEmail - SMTP configured, setting from address");
 
             // Sender
             $mail->setFrom($this->fromEmail, $this->fromName);
@@ -101,22 +130,26 @@ class EmailService
             $mail->Body = $htmlBody;
             $mail->AltBody = $plainBody;
 
+            error_log("EmailService::sendEmail - Attempting to send...");
+
             // Send email
             $result = $mail->send();
 
             if ($result) {
-                error_log("Email sent successfully to: {$to}");
+                error_log("EmailService::sendEmail - SUCCESS: Email sent to {$to}");
             } else {
-                error_log("Failed to send email to: {$to}");
+                error_log("EmailService::sendEmail - FAILED: mail->send() returned false");
+                throw new \Exception("Error al enviar: " . $mail->ErrorInfo);
             }
 
             return $result;
         } catch (Exception $e) {
-            error_log("PHPMailer Error: " . $e->getMessage());
-            return false;
+            $error = "Error PHPMailer: " . $e->getMessage();
+            error_log("EmailService::sendEmail - PHPMailer Exception: " . $e->getMessage());
+            throw new \Exception($error);
         } catch (\Exception $e) {
-            error_log("Error sending email: " . $e->getMessage());
-            return false;
+            error_log("EmailService::sendEmail - General Exception: " . $e->getMessage());
+            throw $e;
         }
     }
 
